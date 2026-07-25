@@ -3,9 +3,13 @@ import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
+import errorHandler from "./middleware/error.middleware.js";
+
+
 import userRouter from "./route/user.Router.js";
 import tokenRoutes  from "./route/token.routes.js"
-import errorHandler from "./middleware/error.middleware.js";
+import resumeRoutes from "./route/resume.routes.js"
+
 
 const app = express();
 
@@ -61,7 +65,7 @@ app.use(morgan("dev"));
 
 app.use('/api/v1',userRouter);  //routes at last after all middleware because when request come first go to all middleware then come to routes
 app.use('/api/v1',tokenRoutes);
-
+app.use('/api/v1',resumeRoutes)
 
 // Global Error Handler (ALWAYS LAST)
 app.use(errorHandler);

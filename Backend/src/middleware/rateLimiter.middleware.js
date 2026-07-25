@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit"; 
+import rateLimit from "express-rate-limit";
 //middleware that count frontend request and store in node memory/RAM but problem is if server restart then count become zero
 
 import { RedisStore } from "rate-limit-redis"; //redis store where we store rate limit data instead of RAM
@@ -12,11 +12,11 @@ import redis from "../config/redis.js"; //redis client connection
 
 const createStore = (prefix) =>
 
-     new RedisStore({
+    new RedisStore({
 
         sendCommand: (...args) => redis.call(...args),
-        prefix, 
-   
+        prefix,
+
     });
 
 // sendCommand: (...args) => redis.call(...args),
@@ -39,6 +39,10 @@ Redis keys become: signup:abc@gmail.com
 
 prefix keep different limiters separate.
 */
+
+
+
+
 
 
 // ==============================
@@ -154,7 +158,7 @@ export const verifyOtpLimiter = rateLimit({
 
 export const forgotPasswordLimiter = rateLimit({
 
-    store:  createStore("forgotPassword:"),
+    store: createStore("forgotPassword:"),
     windowMs: 15 * 60 * 1000,
     max: 3,
     standardHeaders: true,
@@ -225,13 +229,75 @@ export const apiLimiter = rateLimit({
 
 
 
+//rate limiter for Upload Resume
+
+export const uploadResumeLimiter = rateLimit({
+
+    store: createStore("uploadResume: "),
+
+    windowMs: 60 * 60 * 1000,
+
+    max: 10,
+
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    message: {
+
+        success: false,
+
+        message: "Too many resume uploads. Please try again after 1 hour.",
+
+    }
+
+
+});
+
+
+export const ReplaceResumeLimiter = rateLimit({
+
+    store: createStore("replaceResume:"),
+
+    windowMs: 60 * 60 * 1000,
+
+    max: 10,
+
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    message: {
+        success: false,
+
+        message: "Too many replaces. Please try again after 1 hour.",
+
+    }
+
+});
 
 
 
+export const DeleteResumeLimiter = rateLimit({
 
+    store: createStore("deleteResume:"),
 
+    windowMs: 60 * 60 * 1000,
 
+    max: 5,
 
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    message: {
+        success: false,
+
+        message: "Too many delete. Please try again after 1 hour.",
+
+    }
+
+});
 
 
 

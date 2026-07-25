@@ -40,7 +40,7 @@ Content-Type: application/json
 ### Get Profile 
 
 GET http://localhost:6000/api/v1/profile 
-Cookie: accessToken=  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTY1YmUyOGJmZDg2OTdkMGZlZjgwYiIsImVtYWlsIjoibmlraGlsc2luZ2gyNzY0QGdtYWlsLmNvbSIsImlhdCI6MTc4NDA0NDU0MSwiZXhwIjoxNzg0MDQ1NDQxfQ.JQqX9HXqIkJPLQPxKb81BNrRQxvtewE4PtcYIOh-URg
+Cookie: accessToken= eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNWM4NmY2ODRkMDZjMmQ0MThkY2U1YiIsImVtYWlsIjoibmlraGlsc2luZ2hkZmdAZ21haWwuY29tIiwiaWF0IjoxNzg0OTY0MDg5LCJleHAiOjE3ODQ5NjcwODl9.0807Ch3QhCIPqfxbexXLOIucaoIIcQqvVIKQ9eWLbfA
 
 
 ###
@@ -61,10 +61,10 @@ Cookie: accessToken= eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTY1ZmM5ZW
 
 PATCH http://localhost:6000/api/v1/Update-Profile
 Content-Type: application/json
-Cookie: accessToken= eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTY1YmUyOGJmZDg2OTdkMGZlZjgwYiIsImVtYWlsIjoibmlraGlsc2luZ2gyNzY0QGdtYWlsLmNvbSIsImlhdCI6MTc4NDA0NDU0MSwiZXhwIjoxNzg0MDQ1NDQxfQ.JQqX9HXqIkJPLQPxKb81BNrRQxvtewE4PtcYIOh-URg
+Cookie: accessToken= eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNWM4NmY2ODRkMDZjMmQ0MThkY2U1YiIsImVtYWlsIjoibmlraGlsc2luZ2hkZmdAZ21haWwuY29tIiwiaWF0IjoxNzg0OTU2NzQ0LCJleHAiOjE3ODQ5NTc2NDR9.zWMbU_7Iw8Ku0Ppil3-c9sWMfnlDAbC3y1tlbFvf_C4
 
 {
-    "username": "vimal"
+    "username": "raluo"
 }
 
 
@@ -117,3 +117,46 @@ Content-Type: application/json
     "otp": "406966",
     "newPassword": "dhn245dfgA@"
 }
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+### Upload Resume
+
+POST http://localhost:6000/api/v1/upload
+Cookie: accessToken= eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNWM4NmY2ODRkMDZjMmQ0MThkY2U1YiIsImVtYWlsIjoibmlraGlsc2luZ2hkZmdAZ21haWwuY29tIiwiaWF0IjoxNzg0OTU3Nzg1LCJleHAiOjE3ODQ5NTg2ODV9.AA3lt2MMkhigReCSxKurVc8Yns_39bN6bXG075cuuMY
+
+Content-Type: multipart/form-data; boundary=boundary123
+
+--boundary123
+Content-Disposition: form-data; name="resume"; filename="resume.pdf"
+Content-Type: application/pdf
+
+< ./test-files/resume.pdf
+
+--boundary123--
+
+
+
+
+
+### get Resume
+
+GET http://localhost:6000/api/v1/resume
+Cookie: accessToken= eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNWM4NmY2ODRkMDZjMmQ0MThkY2U1YiIsImVtYWlsIjoibmlraGlsc2luZ2hkZmdAZ21haWwuY29tIiwiaWF0IjoxNzg0OTYwNzgzLCJleHAiOjE3ODQ5NjM3ODN9.GmjI8UtMupnTi8Cl1O3nQQFcGh9xSggxp7HzI0OYEFw
+
+
+
+### delete resume 
+
+DELETE  http://localhost:6000/api/v1/resume 
+Cookie: accessToken= eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNWM4NmY2ODRkMDZjMmQ0MThkY2U1YiIsImVtYWlsIjoibmlraGlsc2luZ2hkZmdAZ21haWwuY29tIiwiaWF0IjoxNzg0OTY0MDg5LCJleHAiOjE3ODQ5NjcwODl9.0807Ch3QhCIPqfxbexXLOIucaoIIcQqvVIKQ9eWLbfA

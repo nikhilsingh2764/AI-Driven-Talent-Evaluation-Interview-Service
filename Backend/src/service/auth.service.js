@@ -331,7 +331,7 @@ export const ProfileService = async (userId) => {
     const cacheKey = `profile:${userId}`;
 
     //check profile exist in redis
-    const cacheProfile = redis.get(cacheKey); //return promise because it is asynchronous
+    const cacheProfile = await redis.get(cacheKey); //return promise because it is asynchronous
 
     if (cacheProfile) {
         return JSON.parse(cacheProfile); //return obj to controller
@@ -359,16 +359,24 @@ export const ProfileService = async (userId) => {
 
     }
 
+    try {
 
-    //set profile in redis
-    await redis.set(
-        cacheKey,
-        JSON.stringify(profileData),  //because redis store data in JSON only
-        {
-            EX: 300 //5 min
-        }
+        //set profile in redis
+        await redis.set(
+            cacheKey,
+            JSON.stringify(profileData),  //because redis store data in JSON only
+            "EX",
+            300
 
-    )
+        )
+
+
+    } catch (error) {
+        console.log("REDIS ERROR:", error);
+
+        throw error;
+    }
+
 
     return profileData;
 
@@ -406,7 +414,7 @@ export const UpdateProfileService = async (userId, data) => {
 
         const existingUser = await UserRepository.findByUsername(userId, username);
 
-        if(existingUser) {
+        if (existingUser) {
             throw new ApiError(400, "User already exist")
         }
 
