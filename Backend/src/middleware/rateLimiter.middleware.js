@@ -301,9 +301,108 @@ export const DeleteResumeLimiter = rateLimit({
 
 
 
+//AI limiter
+
+export const resumeAnalysisLimiter = rateLimit({
+
+    store: createStore("resumeAnalysis:"),
+
+    windowMs: 10 * 60 * 1000,
+
+    max: 10,
+
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    message: {
+        success: false,
+
+        message: "Too many delete. Please try again after 1 hour.",
+
+    }
+
+});
 
 
 
 
+export const interviewQuestionLimiter = rateLimit({
 
+    store: createStore("interview-question: "),
+
+    windowMs: 60 * 60 * 1000,
+
+    max: 15,
+
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    message: {
+        success: false,
+        message: "Too many interview generations. Try again later."
+    }
+
+});
+
+
+export const startInterviewSessionLimiter = rateLimit({
+
+    store: createStore("start-Interview-Session: "),
+
+    windowMs: 60 * 60 * 1000,
+
+    max: 20,
+
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    message: {
+        success: false,
+        message: "Too many interview generations. Try again later."
+    }
+
+});
+
+
+export const submitAnswerLimiter = rateLimit({
+
+    store: createStore("Submit-Answer: "),
+
+    windowMs: 60 * 60 * 1000,
+
+    max: 200,
+
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    message: {
+        success: false,
+        message: "Too many interview generations. Try again later."
+    }
+
+});
+
+
+export const generatePerformanceReportLimiter = rateLimit({
+
+    store: createStore("generate-Performance-Report: "),
+
+    windowMs: 15 * 60 * 1000, // 15 minutes
+
+    max: 23,
+
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    message: {
+        success: false,
+        message: "Too many performance report generation requests. Please try again later."
+    }
+
+});
 

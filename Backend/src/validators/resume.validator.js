@@ -15,3 +15,17 @@ export const uploadResumeValidator = [
     })
 
 ];
+
+export const replaceResumeValidator = [
+
+    body().custom((value, { req }) => {
+
+        if (!req.file) {
+            throw new Error("New resume PDF is required");
+        }
+
+        return true;
+
+    })
+
+];

@@ -6,10 +6,12 @@ import morgan from "morgan";
 import errorHandler from "./middleware/error.middleware.js";
 
 
-import userRouter from "./route/user.Router.js";
-import tokenRoutes  from "./route/token.routes.js"
-import resumeRoutes from "./route/resume.routes.js"
-
+import userRouter from "./route/auth/user.routes.js";
+import tokenRoutes  from "./route/auth/token.routes.js"
+import resumeRoutes from "./route/resume/resume.routes.js"
+import analysisRouters from "./route/resume/analysis.routes.js"
+import interviewRouters from "./route/interview/interview.routes.js"
+import performanceRouters from "./route/performance/performance.routes.js"
 
 const app = express();
 
@@ -32,14 +34,24 @@ app.use((req, res, next) => {
     next();
 });
 
-
+/*
 app.use(
     cors({
         origin: process.env.CLIENT_URL,
         credentials: true,
     })
 );
+*/
 
+app.use(
+    cors({
+        origin: [
+            process.env.CLIENT_URL,
+            "https://hoppscotch.io"
+        ],
+        credentials: true,
+    })
+);
 
 
 
@@ -61,11 +73,23 @@ app.use(cookieParser());
 // HTTP Request Logger that logs HTTP requests for debugging and monitoring.
 app.use(morgan("dev"));
 
+app.use((req, res, next) => {
+    console.log("METHOD:", req.method);
+    console.log("URL:", req.originalUrl);
+    console.log("ORIGIN:", req.headers.origin);
+    next();
+});
+
 
 
 app.use('/api/v1',userRouter);  //routes at last after all middleware because when request come first go to all middleware then come to routes
 app.use('/api/v1',tokenRoutes);
 app.use('/api/v1',resumeRoutes)
+app.use('/api/v1',analysisRouters)
+app.use('/api/v1',interviewRouters)
+app.use('/api/v1',performanceRouters);
+
+
 
 // Global Error Handler (ALWAYS LAST)
 app.use(errorHandler);
