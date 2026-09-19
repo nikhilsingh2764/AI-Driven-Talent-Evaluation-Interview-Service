@@ -1,4 +1,4 @@
-🧾 Invoice Processing & Async Email Automation API
+[🧾 Invoice Processing & Async Email Automation API
 A production-style REST API for invoicing, with background PDF generation and email delivery powered by BullMQ and Redis.
 
 CI status Node.js 20 Express 5 MongoDB Redis and BullMQ Docker Swagger
@@ -568,3 +568,4 @@ Nikhil Singh, Backend Engineer
 LinkedIn Email GitHub
 
 If you found this project useful, consider giving it a ⭐
+](https://claude.ai/artifact/5WG7SWLXngJi2pTmxBug3Q)
