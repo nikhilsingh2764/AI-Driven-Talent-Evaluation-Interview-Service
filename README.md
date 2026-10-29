@@ -15,9 +15,8 @@
 </p>
 
 <p>
-  <a href="https://YOUR-LIVE-API-URL">Live API</a> ·
-  <a href="https://YOUR-FRONTEND-URL">Frontend Demo</a> ·
-  <a href="https://YOUR-POSTMAN-COLLECTION-URL">Postman Collection</a>
+  <a href="https://ai-interview-application-26f9.onrender.com">Live API</a> ·
+  <a href="https://documenter.getpostman.com/view/39798617/2sBYHPz29y">Postman Collection</a>
 </p>
 
 </div>
