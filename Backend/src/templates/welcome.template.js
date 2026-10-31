@@ -1,3 +1,5 @@
+import { escapeHtml } from "../utils/escapeHtml.js";
+
 const welcomeTemplate = (username) => {
     return `
     <!DOCTYPE html>
@@ -19,7 +21,7 @@ const welcomeTemplate = (username) => {
                         <tr>
                             <td align="center">
                                 <h1 style="color:#2d3748;margin-bottom:10px;">
-                                    🎉 Welcome, ${username}!
+                                    🎉 Welcome, ${escapeHtml(username)}!
                                 </h1>
 
                                 <p style="font-size:18px;color:#555;">

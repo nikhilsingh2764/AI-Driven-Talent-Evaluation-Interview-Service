@@ -1,122 +1,50 @@
-import User from "../../model/auth/auth.model.js"
+import User from "../../model/auth/auth.model.js";
 
 class UserRepository {
-
-
-    //create  
-
-    async create(userdata) {
-        return await User.create(userdata);
+    create(userdata) {
+        return User.create(userdata);
     }
-
-
-
-    //find
-
-    async findByEmail(email) {
-        return await User.findOne({ email }).select("+password");
+    findByEmail(email) {
+        return User.findOne({ email }).select("+password");
     }
-
-    async findByIdWithPassword(id) {
-        return await User.findById(id).select("+password");
+    findByIdWithPassword(id) {
+        return User.findById(id).select("+password");
     }
-
-    async findByUsername(username) {
-        return await User.findOne({ username });
+    findByUsername(username) {
+        return User.findOne({ username });
     }
-
-    async findByUsernameOrEmail(username, email) {
-        return await User.findOne({
-            $or: [   //any one can be true then true
-                { username },
-                { email }
-            ]
-        });
+    findById(id) {
+        return User.findById(id);
     }
-
-
-    async findById(id) {
-        return await User.findById(id);
+    emailExist(email) {
+        return User.exists({ email });
     }
-
-
-    async findAll() {
-        return await User.find();
+    usernameExist(username) {
+        return User.exists({ username });
     }
-
-
-    //VERIFY
-
-    async verifyEmail(id) {
-        return await User.findByIdAndUpdate(
-            id,
-            {
-                isVerified: true
-            },
-            {
-                new: true
-            }
-        );
+    // Is this username used by someone other than `excludeId`?
+    usernameTakenByOther(username, excludeId) {
+        return User.exists({ username, _id: { $ne: excludeId } });
     }
-
-
-    // EXISTS
-
-
-    async emailExist(email) {
-        return await User.exists({ email })
+    findByIdAndDelete(id) {
+        return User.findByIdAndDelete(id);
     }
-
-
-    async usernameExist(username) {
-        return await User.exists({ username })
+    deactivateAccount(id) {
+        return User.findByIdAndUpdate(id, { isActive: false }, { returnDocument: "after" });
     }
-
-
-
-    //DELETE
-
-
-    async findByIdAndDelete(id) {
-        return await User.findByIdAndDelete(id);
+    updateProfile(id, data) {
+        return User.findByIdAndUpdate(id, data, { returnDocument: "after", runValidators: true });
     }
-
-    async deactivateAccount(id) {
-        return await User.findByIdAndUpdate(
-            id,
-            {
-                isActive: false //User account is deactivated. ❌
-            },                  //if true account is activate.  ✅
-            {
-                //return updated document where isActive is false if return updated doc in normal isActive is true  
-                returnDocument: "after",
-                runValidators: true
-
-            }
-        );
+    // Atomic, so two parallel wrong passwords cannot overwrite each other's counter.
+    async registerFailedLogin(id, maxAttempts, lockMs) {
+        const user = await User.findByIdAndUpdate(id, { $inc: { failedLoginAttempts: 1 } }, { returnDocument: "after" });
+        if (user && user.failedLoginAttempts >= maxAttempts) {
+            await User.updateOne({ _id: id }, { lockUntil: new Date(Date.now() + lockMs) });
+        }
+        return user;
     }
-
-
-
-    //update
-
-    async updateProfile(id, data) {
-        return await User.findByIdAndUpdate(
-            id,
-            data,
-            {
-                new: true,
-                runValidators: true  //first run schema validation like min:18, include:@ then update
-            }
-
-        )
+    resetLoginFailures(id) {
+        return User.updateOne({ _id: id }, { failedLoginAttempts: 0, lockUntil: null });
     }
-
-
-
-
-
-
 }
-
 export default new UserRepository();

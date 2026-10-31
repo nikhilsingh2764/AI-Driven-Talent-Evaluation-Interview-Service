@@ -1,35 +1,17 @@
-import Resume from "../../model/resume/resume.model.js"
+import Resume from "../../model/resume/resume.model.js";
 
 class ResumeRepository {
-
-    async create(data) {
-        return await Resume.create(data);
+    create(data) {
+        return Resume.create(data);
     }
-
-    async findByUserId(userId) {
-        return await Resume.findOne({ userId });
+    findByUserId(userId) {
+        return Resume.findOne({ userId });
     }
-
-    async existsByUserId(userId) {
-        return await Resume.exists({ userId });
+    updateByUserId(userId, data) {
+        return Resume.findOneAndUpdate({ userId }, data, { returnDocument: "after", runValidators: true });
     }
-
-    async updateByUserId(userId, data) {
-        return await Resume.findOneAndUpdate(
-            { userId },
-            data,
-            {
-                new: true,
-                runValidators: true
-            }
-        );
+    deleteByUserId(userId) {
+        return Resume.findOneAndDelete({ userId });
     }
-
-    async deleteByUserId(userId) {
-        return await Resume.findOneAndDelete({ userId });
-    }
-
-
 }
-
 export default new ResumeRepository();

@@ -1,134 +1,33 @@
 import jwt from "jsonwebtoken";
 import ApiError from "../../utils/ApiError.js";
-import generateToken from "../../utils/auth/generateToken.js";
-
+import { hashValue } from "../../utils/auth/generateOTP.js";
+import { issueTokens } from "../../utils/auth/session.js";
 import userRepository from "../../repository/auth/user.repository.js";
 import refreshTokenRepository from "../../repository/auth/refreshToken.repository.js";
 
-
+// Exchanges a valid refresh token for a new access + refresh pair (rotation: the old one stops working).
 const RefreshTokenService = async (refreshToken) => {
+    if (!refreshToken) throw new ApiError(401, "Refresh token is missing");
 
-    // Check refresh token exists
-    if (!refreshToken) {
-        throw new ApiError(
-            401,
-            "Refresh token is missing"
-        );
-    }
-
-
-    // Verify refresh token
     let decoded;
-
     try {
-
-        decoded = jwt.verify(
-            refreshToken,
-            process.env.REFRESH_TOKEN_SECRET
-        );
-
-    } catch (error) {
-
-        throw new ApiError(
-            401,
-            "Invalid refresh token"
-        );
-
+        decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    } catch {
+        throw new ApiError(401, "Invalid refresh token");
     }
 
+    const stored = await refreshTokenRepository.findByHash(hashValue(refreshToken));
+    if (!stored) throw new ApiError(401, "Refresh token expired or revoked");
 
-    // Check token exists in database
-    const storedToken =
-        await refreshTokenRepository.findByToken(refreshToken);
+    const user = await userRepository.findById(decoded.id);
+    if (!user) throw new ApiError(401, "User not found");
+    if (!user.isActive) throw new ApiError(403, "Account is deactivated");
 
+    // deleteOne reports how many rows it removed, so two parallel refreshes cannot both succeed
+    const removed = await refreshTokenRepository.deleteByHash(hashValue(refreshToken));
+    if (removed.deletedCount === 0) throw new ApiError(401, "Refresh token already used");
 
-    if (!storedToken) {
-
-        throw new ApiError(
-            401,
-            "Refresh token expired or revoked"
-        );
-
-    }
-
-
-    // Find user
-    const user =
-        await userRepository.findById(decoded.id);
-
-
-    if (!user) {
-
-        throw new ApiError(
-            401,
-            "User not found"
-        );
-
-    }
-
-
-    // Check account active
-    if (!user.isActive) {
-
-        throw new ApiError(
-            403,
-            "Account is deactivated"
-        );
-
-    }
-
-
-    // Delete old refresh token (rotation)
-    await refreshTokenRepository.deleteByToken(
-        refreshToken
-    );
-
-
-    // Generate new access token
-    const newAccessToken = generateToken(
-        {
-            id: user._id,
-            email: user.email
-        },
-        process.env.ACCESS_TOKEN_SECRET,
-        process.env.ACCESS_TOKEN_EXPIRES_IN
-    );
-
-
-    // Generate new refresh token
-    const newRefreshToken = generateToken(
-        {
-            id: user._id
-        },
-        process.env.REFRESH_TOKEN_SECRET,
-        process.env.REFRESH_TOKEN_EXPIRES_IN
-    );
-
-
-    // Save new refresh token
-    await refreshTokenRepository.create({
-
-        userId: user._id,
-
-        token: newRefreshToken,
-
-        expiresAt: new Date(
-            Date.now() + 
-            15 * 24 * 60 * 60 * 1000
-        )
-
-    });
-
-
-    return {
-
-        accessToken: newAccessToken,
-
-        refreshToken: newRefreshToken
-
-    };
-
+    return issueTokens(user);
 };
-
 
 export default RefreshTokenService;

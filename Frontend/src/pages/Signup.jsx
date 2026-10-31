@@ -1,121 +1,43 @@
-import Button from "../components/common/Button";
-import Input from "../components/common/Input";
-import Card from "../components/common/Card";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { api } from "../api.js";
+import { Alert } from "../components/ui.jsx";
 
-import { useForm } from "react-hook-form"; //Main hook from React Hook Form. Manages form state, validation, submission and errors.
-import { zodResolver } from "@hookform/resolvers/zod"; //Connects the Zod validation schema  with React Hook Form. Every submit is validated using signupSchema.
-import { toast } from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+export default function Signup() {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ username: "", email: "", password: "" });
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-import { signupSchema } from "../validation/auth.schema"; //validation schema
-import { signup } from "../services/auth.service";
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const data = await api.signup(form);
+      // devOtp only exists when the backend runs with EXPOSE_OTP_IN_RESPONSE=true (local testing)
+      navigate("/verify", { state: { email: data.email, devOtp: data.devOtp } });
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  };
 
-
-function Signup() {
-
-    const navigate = useNavigate();
-
-    const {
-
-        register, // Registers an input with React Hook Form. Tracks its value automatically and automatically supplies: name,ref,onChange,onBlur
-        handleSubmit, // Validates the form. Calls onSubmit() only if validation passes.
-        formState: { errors, isSubmitting } //errors:Contains validation errors for each field.
-        //isSubmitting: / Boolean provided by React Hook Form. true=while form submission is running false =  after submission completes
-
-    } = useForm({
-        resolver: zodResolver(signupSchema),
-
-        defaultValues: { // Sets the initial values of all form fields.
-
-            username: "",
-
-            email: "",
-
-            password: ""
-
-        }
-
-    });
-
-
-    const onSubmit = async (data) => {
-        try {
-            const response = await signup(data);
-
-            toast.success(response.message)
-            console.log(response);
-
-            sessionStorage.setItem("verifyEmail", response.data.email); //so if we refresh verify-otp page email state remains not vanish
-
-            navigate("/verify-otp");
-
-
-        } catch (error) {
-
-            console.log("Full error:", error);
-            console.log(error.response);
-            console.log("Backend error:", error.response?.data);
-            console.log(error.response?.data?.errors?.[0]?.msg);
-
-            toast.error(
-                error.response?.data?.message ||
-                error.response?.data?.errors?.[0]?.message ||
-                "Something went wrong"
-            );
-        }
-    };
-
-
-    return (
-        <section className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-gray-100 px-4 py-10">
-
-            <Card
-                title="Create Account"
-                subtitle="Create your account to continue"
-            >
-
-                <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
-
-                    <Input
-                        label="Username"
-                        autoComplete="username"
-                        placeholder="Enter username"
-                        error={errors.username?.message}
-                        {...register("username")}
-                    />
-
-                    <Input
-                        label="Email"
-                        type="email"
-                        autoComplete="email"
-                        error={errors.email?.message}
-                        {...register("email")}
-                        placeholder="Enter email"
-                    />
-
-                    <Input
-                        label="Password"
-                        type="password"
-                        autoComplete="new-password"
-                        error={errors.password?.message}
-                        {...register("password")}
-                        placeholder="Enter password"
-                    />
-
-                    <Button type="submit" loading={isSubmitting}>
-                        Create Account
-                    </Button>
-
-                </form>
-
-            </Card>
-        </section>
-    );
+  return (
+    <div className="center-page">
+      <h1>Create account</h1>
+      <form className="auth-card" onSubmit={submit}>
+        <Alert>{error}</Alert>
+        <label>Username<input required minLength={3} maxLength={30} pattern="[A-Za-z0-9_]+" title="Letters, numbers and underscores" value={form.username} onChange={set("username")} /></label>
+        <label>Email<input type="email" required value={form.email} onChange={set("email")} /></label>
+        <label>Password
+          <input type="password" required minLength={8} autoComplete="new-password" value={form.password} onChange={set("password")} />
+          <span className="hint">8+ characters with upper and lower case, a number and one of @$!%*?&</span>
+        </label>
+        <button className="btn" disabled={busy}>{busy ? "Sending OTP..." : "Sign up"}</button>
+        <p className="small muted" style={{ margin: 0 }}>Already have an account? <Link to="/login">Log in</Link></p>
+      </form>
+    </div>
+  );
 }
-
-export default Signup;
-
-//loading: Custom prop passed to the Button component.  Shows a spinner and disables the button
-// Spread operator (...)Expands the object returned by register() into individual props for the Input component.
-
-//HTML attribute: Helps browsers autofill inputs and works with password managers.

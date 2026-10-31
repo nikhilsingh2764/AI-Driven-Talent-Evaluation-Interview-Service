@@ -1,42 +1,15 @@
 import ResumeAnalysis from "../../model/resume/resumeAnalysis.model.js";
 
 class ResumeAnalysisRepository {
-
-    async create(data) {
-        return await ResumeAnalysis.create(data);
+    findByUserId(userId) {
+        return ResumeAnalysis.findOne({ userId });
     }
-
-    async findByUserId(userId) {
-        return await ResumeAnalysis.findOne({ userId });
+    // One analysis per user: created the first time, updated on every re-run (atomic, no check-then-write race).
+    upsertByUserId(userId, data) {
+        return ResumeAnalysis.findOneAndUpdate({ userId }, { ...data, userId }, { returnDocument: "after", upsert: true, runValidators: true, setDefaultsOnInsert: true });
     }
-
-    async findByResumeId(resumeId) {
-        return await ResumeAnalysis.findOne({ resumeId });
+    deleteByUserId(userId) {
+        return ResumeAnalysis.findOneAndDelete({ userId });
     }
-
-
-    async findByResumeIdAndUserId(resumeId) {
-        return await ResumeAnalysis.findOne({ userId, resumeId });
-    }
-
-
-    async updateByUserId(userId, data) {
-        return await ResumeAnalysis.findOneAndUpdate(
-            { userId },
-            data,
-            {
-                new: true,
-                runValidators: true
-            }
-        );
-    }
-
-    async deleteByUserId(userId) {
-        return await ResumeAnalysis.findOneAndDelete({ userId });
-    }
-
-
-
-};
-
+}
 export default new ResumeAnalysisRepository();

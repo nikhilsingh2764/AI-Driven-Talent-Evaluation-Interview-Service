@@ -1,25 +1,52 @@
-import AppRoutes from "./routes/AppRoutes";
-import { Toaster } from "react-hot-toast";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { useAuth } from "./auth.jsx";
+import Layout from "./components/Layout.jsx";
+import { Spinner } from "./components/ui.jsx";
+import Login from "./pages/Login.jsx";
+import Signup from "./pages/Signup.jsx";
+import VerifyOtp from "./pages/VerifyOtp.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import Resume from "./pages/Resume.jsx";
+import Interviews from "./pages/Interviews.jsx";
+import InterviewRun from "./pages/InterviewRun.jsx";
+import Report from "./pages/Report.jsx";
+import History from "./pages/History.jsx";
+import Performance from "./pages/Performance.jsx";
+import Profile from "./pages/Profile.jsx";
 
-function App() {
-  return (
-    <>
-      <Toaster
-        position="top-right"
-        reverseOrder={false}
-        toastOptions={{
-          duration: 3000,
-        }}
-      />
-
-      <AppRoutes />
-    </>
-  );
+function Protected() {
+  const { user, loading } = useAuth();
+  if (loading) return <Spinner label="Loading..." />;
+  return user ? <Layout><Outlet /></Layout> : <Navigate to="/login" replace />;
 }
 
-export default App;
+function GuestOnly() {
+  const { user, loading } = useAuth();
+  if (loading) return <Spinner label="Loading..." />;
+  return user ? <Navigate to="/" replace /> : <Outlet />;
+}
 
-
-//Global toast container.
-//Shows success/error/info notifications anywhere in the app.
-// Add it only ONCE, usually in App.jsx.
+export default function App() {
+  return (
+    <Routes>
+      <Route element={<GuestOnly />}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/verify" element={<VerifyOtp />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+      </Route>
+      <Route element={<Protected />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/resume" element={<Resume />} />
+        <Route path="/interviews" element={<Interviews />} />
+        <Route path="/interview/:sessionId" element={<InterviewRun />} />
+        <Route path="/report/:sessionId" element={<Report />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/performance" element={<Performance />} />
+        <Route path="/profile" element={<Profile />} />
+      </Route>
+      <Route path="*" element={<div className="center-page"><h1>404</h1><p>Page not found.</p><a href="/">Go home</a></div>} />
+    </Routes>
+  );
+}

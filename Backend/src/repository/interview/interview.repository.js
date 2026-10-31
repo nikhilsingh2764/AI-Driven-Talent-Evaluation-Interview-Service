@@ -1,67 +1,30 @@
 import Interview from "../../model/interview/interview.model.js";
 
 class InterviewRepository {
-
-    //create interview
-    async create(data) {
-        return await Interview.create(data);
+    create(data) {
+        return Interview.create(data);
     }
-
-        //create interview
-    async save(interview) {
-        return await interview.save();
+    save(interview) {
+        return interview.save();
     }
-
-
-    // Find interview by id
-    async findById(interviewId) {
-        return await Interview.findById( interviewId );
+    findById(interviewId) {
+        return Interview.findById(interviewId);
     }
-
-    //find interview by id and check it belong to user or not
-    async findByIdAndUserId(interviewId,userId) {
-        return await Interview.findOne({ _id: interviewId, userId });
+    // Returns null when the interview exists but belongs to someone else
+    findByIdAndUserId(interviewId, userId) {
+        return Interview.findOne({ _id: interviewId, userId });
     }
-
-    // Find user's all interviews
-    async findByUserId(userId) {
-        return await Interview.find({
-            userId
-        }).sort({ createdAt: -1 })
+    findByUserId(userId, filter = {}) {
+        return Interview.find({ userId, ...filter }).sort({ createdAt: -1 });
     }
-
-
-    // Find interview with resume and analysis details
-    async findByIdWithDetails(interviewId) {
-
-        return await Interview.findById(interviewId)
-            .populate("resumeId")    //replace resumeId field with actual resume object from DB
-            .populate("analysisId"); //replace analysisId field with actual analysis object from DB
-
+    updateStatus(interviewId, status) {
+        return Interview.findByIdAndUpdate(interviewId, { status }, { returnDocument: "after" });
     }
-
-
-    // Update interview status
-    async updateStatus(interviewId, status) {
-        return await Interview.findByIdAndDelete(
-            interviewId,
-            {
-                status
-            },
-            {
-                new: true,
-            }
-        );
+    delete(interviewId) {
+        return Interview.findByIdAndDelete(interviewId);
     }
-
-
-    // Delete interview
-    async delete(interviewId) {
-        return await Interview.findByIdAndDelete({ interviewId });
+    deleteByUserId(userId) {
+        return Interview.deleteMany({ userId });
     }
-
-
-
 }
-
 export default new InterviewRepository();

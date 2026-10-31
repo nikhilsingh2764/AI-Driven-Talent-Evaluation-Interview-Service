@@ -1,60 +1,18 @@
-import express from 'express';
-
-import authMiddleware from '../../middleware/auth.middleware.js';
-
-
+import express from "express";
+import authMiddleware from "../../middleware/auth.middleware.js";
+import validate from "../../middleware/validate.js";
 import {
-
-    generatePerformanceReport,
-    getInterviewHistory,
-    getDashboard,
-    getPerformanceReport,
-    downloadPerformanceReport
-
-} from '../../controller/performance/performance.controller.js';
-
-import { generatePerformanceReportLimiter } from "../../middleware/rateLimiter.middleware.js"
-
+    generatePerformanceReport, getInterviewHistory, getDashboard, getPerformanceReport, downloadPerformanceReport,
+} from "../../controller/performance/performance.controller.js";
+import { historyQueryValidator } from "../../validators/interview.validator.js";
+import { generatePerformanceReportLimiter, apiLimiter } from "../../middleware/rateLimiter.middleware.js";
 
 const router = express.Router();
 
-// Generate Performance Report (AI)
-router.post(
-    "/performance/generate",
-    generatePerformanceReportLimiter,
-    authMiddleware,
-    generatePerformanceReport
-);
-
-// Get Performance Report
-router.get(
-    "/performance",
-    authMiddleware,
-    getPerformanceReport
-);
-
-// Download Performance PDF
-router.get(
-    "/performance/pdf",
-    authMiddleware,
-    downloadPerformanceReport
-)
-
-// Interview History
-router.get(
-    "/history",
-    authMiddleware,
-    getInterviewHistory
-);
-
-
-// Dashboard
-router.get(
-    "/dashboard",
-    authMiddleware,
-    getDashboard
-);
-
-
+router.post("/performance/generate", generatePerformanceReportLimiter, authMiddleware, generatePerformanceReport);
+router.get("/performance", apiLimiter, authMiddleware, getPerformanceReport);
+router.get("/performance/pdf", apiLimiter, authMiddleware, downloadPerformanceReport);
+router.get("/history", apiLimiter, authMiddleware, historyQueryValidator, validate, getInterviewHistory);
+router.get("/dashboard", apiLimiter, authMiddleware, getDashboard);
 
 export default router;

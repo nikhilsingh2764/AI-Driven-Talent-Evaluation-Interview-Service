@@ -1,33 +1,15 @@
 import PerformanceReport from "../../model/performance/performance.report.model.js";
 
 class PerformanceRepository {
-
-    async create(data) {
-        return await PerformanceReport.create(data);
+    findByUserId(userId) {
+        return PerformanceReport.findOne({ userId });
     }
-
-    async findById(_id) {
-        return await PerformanceReport.findById(_id);
+    // One report per user: create it the first time, overwrite it when regenerated.
+    upsertByUserId(userId, data) {
+        return PerformanceReport.findOneAndUpdate({ userId }, { ...data, userId }, { returnDocument: "after", upsert: true, runValidators: true, setDefaultsOnInsert: true });
     }
-
-    async findByUserId(userId) {
-        return await PerformanceReport.findOne({ userId });
+    deleteByUserId(userId) {
+        return PerformanceReport.findOneAndDelete({ userId });
     }
-
-    async updateByUserId(userId, data) {
-        return await PerformanceReport.findOneAndUpdate(
-            { userId },
-            data,
-            {
-                new: true
-            }
-        );
-    }
-
-    async deleteByUserId(userId) {
-        return await PerformanceReport.findOneAndDelete({ userId });
-    }
-
 }
-
 export default new PerformanceRepository();

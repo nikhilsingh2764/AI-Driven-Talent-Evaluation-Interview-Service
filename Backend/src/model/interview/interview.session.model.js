@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const interviewSessionSchema = mongoose.Schema({
+const interviewSessionSchema = new mongoose.Schema({
 
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -25,6 +25,9 @@ const interviewSessionSchema = mongoose.Schema({
 
 
 }, { timestamps: true });
+
+// Only one STARTED session per interview, enforced by the database (blocks two simultaneous "start" requests).
+interviewSessionSchema.index({ interviewId: 1 }, { unique: true, partialFilterExpression: { status: "STARTED" } });
 
 const InterviewSession = mongoose.model("InterviewSession", interviewSessionSchema);
 

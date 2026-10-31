@@ -1,82 +1,48 @@
 import InterviewReport from "../../model/interview/InterviewReport.model.js";
 
-
 class ReportRepository {
-
-    async create(data) {
-        return await InterviewReport.create(data);
+    create(data) {
+        return InterviewReport.create(data);
+    }
+    findById(_id) {
+        return InterviewReport.findById(_id);
+    }
+    findOneBySessionId(sessionId) {
+        return InterviewReport.findOne({ sessionId });
+    }
+    findByInterviewIds(interviewIds) {
+        return InterviewReport.find({ interviewId: { $in: interviewIds } });
+    }
+    findByUserId(userId) {
+        return InterviewReport.find({ userId }).sort({ createdAt: 1 });
+    }
+    deleteByUserId(userId) {
+        return InterviewReport.deleteMany({ userId });
     }
 
-    async findById(_id) {
-        return await InterviewReport.findById(_id);
+    // Paginated history. `interviewIds` (optional) restricts it to interviews that matched the role/difficulty/category filters.
+    async findInterviewHistory({ userId, page = 1, limit = 10, sort, interviewIds }) {
+        const filter = { userId };
+        if (interviewIds) filter.interviewId = { $in: interviewIds };
+
+        const sortBy =
+            sort === "oldest"
+                ? { createdAt: 1 }
+                : sort === "highest-score"
+                  ? { overallScore: -1, createdAt: -1 }
+                  : sort === "lowest-score"
+                    ? { overallScore: 1, createdAt: -1 }
+                    : { createdAt: -1 };
+
+        const [items, total] = await Promise.all([
+            InterviewReport.find(filter)
+                .populate("interviewId", "role experience difficulty")
+                .sort(sortBy)
+                .skip((page - 1) * limit)
+                .limit(limit),
+            InterviewReport.countDocuments(filter),
+        ]);
+        return { items, total };
     }
-
-    async findBySessionId(sessionId) {
-        return await InterviewReport.find({ sessionId });
-    }
-
-    async findByInterviewId(interviewId) {
-        return await InterviewReport.find({ interviewId });
-    }
-
-    async findByUserId(userId) {
-        return await InterviewReport.find({ userId });
-    }
-
-    async updateById(_id, data) {
-        return await InterviewReport.findByIdAndUpdate(
-            _id,
-            data,
-            {
-                new: true
-            }
-        );
-    }
-
-    async deleteBySessionId(sessionId) {
-        return await InterviewReport.deleteOne({ sessionId });
-    }
-
-    async findInterviewHistory({
-        userId,
-        page = 1,
-        limit = 10,
-        sort
-    }) {
-
-        let query = InterviewReport.find({ userId })
-            .populate(
-                "interviewId",
-                "role difficulty category"
-            );
-
-
-        switch (sort) {
-
-            case "oldest":
-                query = query.sort({ createdAt: 1 });
-                break;
-
-            case "highest-score":
-                query = query.sort({ overallScore: -1 });
-                break;
-
-            case "lowest-score":
-                query = query.sort({ overallScore: 1 });
-                break;
-
-            default:
-                query = query.sort({ createdAt: -1 });
-
-        }
-
-
-        return await query
-            .skip((page - 1) * limit)
-            .limit(limit);
-
-    }
-
 }
-
 export default new ReportRepository();

@@ -1,16 +1,13 @@
-// Access Token Cookie Options
-export const accessTokenOptions = {
-    httpOnly: true, // JavaScript cannot access cookie
-    secure: process.env.NODE_ENV === "production", // HTTPS only in production
-    sameSite: "strict", // Protect against CSRF
-    maxAge: 15 * 60 * 1000 // 15 minutes
-};
+import { env } from "../../config/env.js";
 
-
-// Refresh Token Cookie Options
-export const refreshTokenOptions = {
+const base = () => ({
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 15 * 24 * 60 * 60 * 1000  // 15 days
-};
+    secure: env.isProd || env.cookieSameSite === "none",
+    sameSite: env.cookieSameSite,
+});
+
+export const accessTokenOptions = { ...base(), maxAge: 15 * 60 * 1000 };
+export const refreshTokenOptions = { ...base(), maxAge: env.refreshTtlMs };
+
+// clearCookie must use the same options (without maxAge) or some browsers keep the cookie.
+export const clearOptions = base();

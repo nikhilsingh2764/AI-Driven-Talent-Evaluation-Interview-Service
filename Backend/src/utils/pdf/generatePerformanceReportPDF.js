@@ -1,42 +1,31 @@
 import PDFDocument from "pdfkit";
 
-export const generatePerformanceReportPDF = async (report) => {
+const list = (doc, items) => {
+    (Array.isArray(items) && items.length ? items : ["-"]).forEach((item) => doc.fontSize(12).text(`• ${item}`));
+};
 
-    return new Promise((resolve, reject) => {
+const heading = (doc, title) => {
+    doc.moveDown().fontSize(16).fillColor("#111").text(title);
+    doc.moveDown(0.4).fontSize(12);
+};
 
+export const generatePerformanceReportPDF = (report, username = "") =>
+    new Promise((resolve, reject) => {
         try {
-
-            const doc = new PDFDocument({
-                margin: 50,
-                size: "A4"
-            });
-
+            const doc = new PDFDocument({ margin: 50, size: "A4" });
             const buffers = [];
-
             doc.on("data", (chunk) => buffers.push(chunk));
+            doc.on("end", () => resolve(Buffer.concat(buffers)));
+            doc.on("error", reject);
 
-            doc.on("end", () => {
-                resolve(Buffer.concat(buffers));
-            });
+            doc.fontSize(22).text("Performance Report", { align: "center" });
+            doc.fontSize(10).fillColor("#666").text(
+                `${username ? `${username} · ` : ""}Generated ${new Date(report.updatedAt || Date.now()).toLocaleDateString("en-US")}`,
+                { align: "center" },
+            );
+            doc.fillColor("#111");
 
-            // Heading
-            doc
-                .fontSize(22)
-                .text("Performance Report", {
-                    align: "center"
-                });
-
-            doc.moveDown();
-
-            // Scores
-            doc
-                .fontSize(16)
-                .text("Overall Progress");
-
-            doc.moveDown(0.5);
-
-            doc.fontSize(12);
-
+            heading(doc, "Progress");
             doc.text(`Overall Progress : ${report.overallProgress}%`);
             doc.text(`Technical Progress : ${report.technicalProgress}%`);
             doc.text(`Communication Progress : ${report.communicationProgress}%`);
@@ -45,81 +34,19 @@ export const generatePerformanceReportPDF = async (report) => {
             doc.text(`Interview Readiness : ${report.interviewReadiness}%`);
             doc.text(`Total Interviews : ${report.totalInterviews}`);
 
-            doc.moveDown();
-
-            // Strongest Skill
-            doc
-                .fontSize(16)
-                .text("Strongest Skill");
-
-            doc.moveDown(0.5);
-
-            doc
-                .fontSize(12)
-                .text(report.strongestSkill);
-
-            doc.moveDown();
-
-            // Weakest Skill
-            doc
-                .fontSize(16)
-                .text("Weakest Skill");
-
-            doc.moveDown(0.5);
-
-            doc
-                .fontSize(12)
-                .text(report.weakestSkill);
-
-            doc.moveDown();
-
-            // Improvement Areas
-            doc
-                .fontSize(16)
-                .text("Improvement Areas");
-
-            doc.moveDown(0.5);
-
-            report.improvementAreas.forEach((item) => {
-                doc.fontSize(12).text(`• ${item}`);
-            });
-
-            doc.moveDown();
-
-            // Study Plan
-            doc
-                .fontSize(16)
-                .text("Study Plan");
-
-            doc.moveDown(0.5);
-
-            report.studyPlan.forEach((item) => {
-                doc.fontSize(12).text(`• ${item}`);
-            });
-
-            doc.moveDown();
-
-            // Summary
-            doc
-                .fontSize(16)
-                .text("Summary");
-
-            doc.moveDown(0.5);
-
-            doc
-                .fontSize(12)
-                .text(report.summary, {
-                    align: "justify"
-                });
+            heading(doc, "Strongest Skill");
+            doc.text(report.strongestSkill || "-");
+            heading(doc, "Weakest Skill");
+            doc.text(report.weakestSkill || "-");
+            heading(doc, "Improvement Areas");
+            list(doc, report.improvementAreas);
+            heading(doc, "Study Plan");
+            list(doc, report.studyPlan);
+            heading(doc, "Summary");
+            doc.text(report.summary || "-", { align: "justify" });
 
             doc.end();
-
         } catch (error) {
-
             reject(error);
-
         }
-
     });
-
-};
