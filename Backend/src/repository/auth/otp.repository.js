@@ -1,58 +1,21 @@
-import OTP from "../../model/auth/opt.model.js"
-
+import OTP from "../../model/auth/opt.model.js";
 
 class OTPRepository {
-
-
-    // Save OTP and signup data in DB
-    async create(data) {
-        return await OTP.create(data);
+    create(data) {
+        return OTP.create(data);
     }
-
-
-    // Find OTP using email during verification
-    // Include password field
-    async findByEmail(email) {
-        return await OTP.findOne({ email })
-            .select("+password");
+    // Newest OTP for an email + type (includes the stored password hash used at signup)
+    findByEmailAndType(email, type) {
+        return OTP.findOne({ email, type }).sort({ createdAt: -1 }).select("+password");
     }
-
-
-    // Remove all old OTP before generating a new one
-    async deleteByEmail(email) {
-        return await OTP.deleteMany({ email });
+    deleteById(id) {
+        return OTP.findByIdAndDelete(id);
     }
-
-
-    async deleteById(id) {
-        return await OTP.findByIdAndDelete(id);
+    deleteByEmailAndType(email, type) {
+        return OTP.deleteMany({ email, type });
     }
-
-
-    // Find by email + type
-    async findByEmailAndType(email, type) {
-
-        return await OTP.findOne({
-            email,
-            type
-        })
-        .select("+password");
-
+    incrementAttempts(id) {
+        return OTP.findByIdAndUpdate(id, { $inc: { attempts: 1 } }, { returnDocument: "after" });
     }
-
-
-    // Delete by email + type
-    async deleteByEmailAndType(email, type) {
-
-        return await OTP.deleteMany({
-            email,
-            type
-        });
-
-    }
-
-
 }
-
-
 export default new OTPRepository();

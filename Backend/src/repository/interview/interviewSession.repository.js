@@ -1,60 +1,34 @@
 import InterviewSession from "../../model/interview/interview.session.model.js";
 
 class SessionRepository {
-
-    async create(data) {
-        return await InterviewSession.create(data);
+    create(data) {
+        return InterviewSession.create(data);
     }
-
-    //create interview
-    async save(session) {
-        return await session.save();
+    save(session) {
+        return session.save();
     }
-
-    async findById(_id) {
-        return await InterviewSession.findById(_id);
-
+    findSessionByIdAndOwner(_id, userId) {
+        return InterviewSession.findOne({ _id, userId });
     }
-
-    async findSessionByIdAndOwner(_id, userId) {
-        return await InterviewSession.findOne({ _id, userId });
-
+    findActiveSession(interviewId) {
+        return InterviewSession.findOne({ interviewId, status: "STARTED" });
     }
-
-
-    async findActiveSession(interviewId) {
-        return await InterviewSession.findOne({
-            interviewId,
-            status: "STARTED"
-        })
+    findByInterviewIds(interviewIds) {
+        return InterviewSession.find({ interviewId: { $in: interviewIds } }).sort({ createdAt: 1 });
     }
-
-    async findByInterviewId(interviewId) {
-        return await InterviewSession.findOne({ interviewId });
-
+    findLatestByInterviewId(interviewId) {
+        return InterviewSession.findOne({ interviewId }).sort({ createdAt: -1 });
     }
-
-    async findByUserId(userId) {
-        return await InterviewSession.find({ userId });
-
-    }
-
-    async updateById(_id, data) {
-        return await InterviewSession.findByIdAndUpdate(
-            _id,
-            data,
-            {
-                new: true
-            }
+    // Moves to the next question only if the session is still on `expectedIndex` (blocks double submits).
+    advanceIfAt(_id, userId, expectedIndex, status = "STARTED") {
+        return InterviewSession.findOneAndUpdate(
+            { _id, userId, status: "STARTED", currentQuestionIndex: expectedIndex },
+            { $inc: { currentQuestionIndex: 1 }, status },
+            { returnDocument: "after" },
         );
-
     }
-
-    async deleteById(_id) {
-        return await InterviewSession.findByIdAndDelete(_id);
-
+    deleteByUserId(userId) {
+        return InterviewSession.deleteMany({ userId });
     }
-
 }
-
 export default new SessionRepository();

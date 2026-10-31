@@ -1,20 +1,9 @@
-const TryCatch = (Handler) => {
-
-    return async (req, res, next) => {
-        try {
-
-            await Handler(req,res,next);
-
-        } catch (error) {
-
-            next(error);
-
-        }
+// Wraps an async handler so any thrown error reaches the error middleware.
+const TryCatch = (handler) => async (req, res, next) => {
+    try {
+        await handler(req, res, next);
+    } catch (error) {
+        next(error);
     }
-
-}
-
-
-
+};
 export default TryCatch;
-

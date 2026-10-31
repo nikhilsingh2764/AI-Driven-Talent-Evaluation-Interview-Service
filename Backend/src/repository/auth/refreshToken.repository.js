@@ -1,44 +1,17 @@
 import RefreshToken from "../../model/auth/refreshToken.model.js";
 
-
 class RefreshTokenRepository {
-
-
-    async create(data){
-
-        return await RefreshToken.create(data);
-
+    create(data) {
+        return RefreshToken.create(data);
     }
-
-
-    async findByToken(token){
-
-        return await RefreshToken.findOne({
-            token
-        });
-
+    findByHash(tokenHash) {
+        return RefreshToken.findOne({ tokenHash });
     }
-
-
-    async deleteByToken(token){
-
-        return await RefreshToken.deleteOne({
-            token
-        });
-
+    deleteByHash(tokenHash) {
+        return RefreshToken.deleteOne({ tokenHash });
     }
-
-
-    async deleteByUserId(userId){
-
-        return await RefreshToken.deleteMany({
-            userId
-        });
-
+    deleteByUserId(userId) {
+        return RefreshToken.deleteMany({ userId });
     }
-
-
 }
-
-
 export default new RefreshTokenRepository();

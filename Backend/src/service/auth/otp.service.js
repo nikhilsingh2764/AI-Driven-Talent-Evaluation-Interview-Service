@@ -1,80 +1,38 @@
-import bcrypt from 'bcrypt';
-import generateOTP from '../../utils/auth/generateOTP.js';
-import sendEmail from '../email/email.service.js';
+import bcrypt from "bcrypt";
+import generateOTP, { hashValue } from "../../utils/auth/generateOTP.js";
+import sendEmail from "../email/email.service.js";
+import otpTemplate from "../../templates/otp.template.js";
+import resetPasswordTemplate from "../../templates/resetPassword.template.js";
+import otpRepository from "../../repository/auth/otp.repository.js";
 
-import otpTemplate from '../../templates/otp.template.js';
-import resetPasswordTemplate from '../../templates/resetPassword.template.js';
+export const SALT_ROUNDS = 10;
+export const OTP_TTL_MS = 10 * 60 * 1000;
 
-
-import userRepository from '../../repository/auth/user.repository.js';
-import otpRepository from '../../repository/auth/otp.repository.js';
-
-
-
-const SALT_ROUNDS = 10;
-
-
+// Creates and emails an OTP. Returns the plain code only so callers can expose it in dev mode.
 const sendOTPService = async ({ username = null, email, password = null, type }) => {
+    // Only signup carries a password (stored hashed until the OTP is verified)
+    const hashedPassword = type === "EMAIL_VERIFICATION" ? await bcrypt.hash(password, SALT_ROUNDS) : null;
 
-
-    //Hash password
-
-    let hashedPassword = null;
-
-    // Hash password only for signup
-    if (type === "EMAIL_VERIFICATION") {
-        hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    }
-
-    //generate 6-digit OPT
     const otp = generateOTP();
-    console.log("OTP IS:", otp);
 
-
-    //OPT expires in 10 min
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); //10 min
-
-    //remove all old opt from this email
+    // One active OTP per email + type
     await otpRepository.deleteByEmailAndType(email, type);
-
-    // Save temporary signup data
     await otpRepository.create({
         username,
         email,
         password: hashedPassword,
-        otp,
-        expiresAt,
-        type
-    })
+        otp: hashValue(otp),
+        type,
+        expiresAt: new Date(Date.now() + OTP_TTL_MS),
+    });
 
-
-    //send to client email
-
+    const devNote = `OTP: ${otp}`; // only printed when SMTP is not configured
     if (type === "EMAIL_VERIFICATION") {
-
-        await sendEmail({
-            to: email,
-            subject: "Verify Your Email",
-            html: otpTemplate(username, otp)
-        });
-
-    } else if (type === "PASSWORD_RESET") {
-
-        await sendEmail({
-            to: email,
-            subject: "Reset Your Password",
-            html: resetPasswordTemplate(otp)
-        });
-
+        await sendEmail({ to: email, subject: "Verify Your Email", html: otpTemplate(username, otp), devNote });
+    } else {
+        await sendEmail({ to: email, subject: "Reset Your Password", html: resetPasswordTemplate(otp), devNote });
     }
-
-
-
-    return null;
-
+    return otp;
 };
 
 export default sendOTPService;
-
-//opt+data save in db and opt send to client email next is opt verify
-

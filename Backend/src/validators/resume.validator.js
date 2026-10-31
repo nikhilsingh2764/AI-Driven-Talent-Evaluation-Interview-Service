@@ -1,31 +1,9 @@
 import { body } from "express-validator";
 
-export const uploadResumeValidator = [
+const needFile = (message) => body().custom((value, { req }) => {
+    if (!req.file) throw new Error(message);
+    return true;
+});
 
-    // Check if multer uploaded a file
-    body().custom((value, { req }) => {
-
-        if (!req.file) {
-            throw new Error("Resume PDF is required");
-        }
-
-        return true;
-
-
-    })
-
-];
-
-export const replaceResumeValidator = [
-
-    body().custom((value, { req }) => {
-
-        if (!req.file) {
-            throw new Error("New resume PDF is required");
-        }
-
-        return true;
-
-    })
-
-];
+export const uploadResumeValidator = [needFile("Resume PDF is required (form field name: resume)")];
+export const replaceResumeValidator = [needFile("New resume PDF is required (form field name: resume)")];

@@ -19,6 +19,11 @@ const resumeSchema = new mongoose.Schema({
         required: true
     },
 
+    storage: {
+        type: String,
+        enum: ["cloudinary", "local"],
+        default: "cloudinary"
+    },
     publicId: {
         type: String,
         required: true

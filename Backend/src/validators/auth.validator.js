@@ -1,84 +1,37 @@
 import { body } from "express-validator";
 
-export const signupValidator = [
+const email = () => body("email").trim().notEmpty().withMessage("Email is required").bail().isEmail().withMessage("Invalid email address").bail().normalizeEmail({ gmail_remove_dots: false });
 
+const strongPassword = (field, label = "Password") =>
+    body(field)
+        .isString().withMessage(`${label} is required`)
+        .bail()
+        .isLength({ min: 8, max: 72 }).withMessage(`${label} must be 8 to 72 characters`)
+        .matches(/[A-Z]/).withMessage(`${label} must contain one uppercase letter`)
+        .matches(/[a-z]/).withMessage(`${label} must contain one lowercase letter`)
+        .matches(/[0-9]/).withMessage(`${label} must contain one number`)
+        .matches(/[@$!%*?&]/).withMessage(`${label} must contain one special character (@$!%*?&)`);
+
+const username = () =>
     body("username")
         .trim()
-        .notEmpty()
-        .withMessage('Username is required')
-        .isLength({ min: 3, max: 30 })
-        .withMessage('Username must be between 3 and 30 Character')
-        .matches(/^[A-Za-z0-9_]+$/)
-        .withMessage("Username can only contain letters, numbers, and underscores"),
+        .notEmpty().withMessage("Username is required")
+        .bail()
+        .isLength({ min: 3, max: 30 }).withMessage("Username must be between 3 and 30 characters")
+        .matches(/^[A-Za-z0-9_]+$/).withMessage("Username can only contain letters, numbers and underscores");
 
-    body("email")
-        .trim()
-        .normalizeEmail()
-        .notEmpty()
-        .withMessage("Email is required")
-        .isEmail()
-        .withMessage("Invalid email address"),
+const otp = () =>
+    body("otp").trim().notEmpty().withMessage("OTP is required").bail().isLength({ min: 6, max: 6 }).withMessage("OTP must be 6 digits").isNumeric().withMessage("OTP must contain only numbers");
 
-    body("password")
-        .notEmpty()
-        .withMessage("Password is required")
-        .isLength({ min: 8 })
-        .withMessage("Password must have minimum 8 characters")
-        .matches(/[A-Z]/)
-        .withMessage("Password must contain one uppercase letter")
-        .matches(/[a-z]/)
-        .withMessage("Password must contain one lowercase letter")
-        .matches(/[0-9]/)
-        .withMessage("Password must contain one number")
-        .matches(/[@$!%*?&]/)
-        .withMessage("Password must contain one special character")
-
-
-
-
-]
-
-export const verifyOtpValidator = [
-    body("email")
-        .trim()
-        .notEmpty().withMessage("Email is required")
-        .isEmail().withMessage("Invalid email format")  //isEmail check email format
-        .normalizeEmail(), // Convert email to standard format
-
-    body("otp")
-        .trim()
-        .notEmpty().withMessage("OTP is required")
-        .isLength({ min: 6, max: 6 }).withMessage("OTP must be 6 digits")
-        .isNumeric().withMessage("OTP must contain only numbers") //isNumeric only allow number
-
-
-
-]
-
-
-export const LoginValidator = [
-
-    body("email")
-        .trim()
-        .notEmpty().withMessage("Email is required")
-        .isEmail().withMessage("Invalid email format")  //isEmail check email format
-        .normalizeEmail(), // Convert email to standard format
-
-    
-    body("password")
-        .notEmpty()
-        .withMessage("Password is required")
-        .isLength({ min: 8 })
-        .withMessage("Password must have minimum 8 characters")
-        .matches(/[A-Z]/)
-        .withMessage("Password must contain one uppercase letter")
-        .matches(/[a-z]/)
-        .withMessage("Password must contain one lowercase letter")
-        .matches(/[0-9]/)
-        .withMessage("Password must contain one number")
-        .matches(/[@$!%*?&]/)
-        .withMessage("Password must contain one special character")
-
-
-]
-
+export const signupValidator = [username(), email(), strongPassword("password")];
+export const verifyOtpValidator = [email(), otp()];
+// Login only checks that a password was sent. Complexity rules belong to signup, not login.
+export const LoginValidator = [email(), body("password").isString().notEmpty().withMessage("Password is required")];
+export const forgotPasswordValidator = [email()];
+export const resetPasswordValidator = [email(), otp(), strongPassword("newPassword", "New password")];
+export const updateProfileValidator = [username()];
+export const changePasswordValidator = [
+    body("oldPassword").isString().notEmpty().withMessage("Old password is required"),
+    strongPassword("newPassword", "New password"),
+];
+export const deleteAccountValidator = [body("password").isString().notEmpty().withMessage("Password is required")];
