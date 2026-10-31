@@ -1,101 +1,41 @@
-import Card from "../components/common/Card";
-import Input from "../components/common/Input";
-import Button from "../components/common/Button";
+import { useState } from "react";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { api } from "../api.js";
+import { Alert } from "../components/ui.jsx";
 
-import { verifyOtpSchema } from "../validation/auth.schema";
-import { verifyOtp } from "../services/auth.service.js";
+export default function VerifyOtp() {
+  const { state } = useLocation();
+  const navigate = useNavigate();
+  const [otp, setOtp] = useState(state?.devOtp || "");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
+  if (!state?.email) return <Navigate to="/signup" replace />;
 
-import { Navigate, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "react-hot-toast";
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      await api.verifyOtp({ email: state.email, otp });
+      navigate("/login", { state: { email: state.email, notice: "Account created. You can log in now." } });
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  };
 
-
-
-
-
-function VerifyOTP() {
-
-    const navigate = useNavigate();
-
-    const {
-        register,
-        handleSubmit,
-        formState: { errors, isSubmitting },
-    } = useForm({
-        resolver: zodResolver(verifyOtpSchema),
-        defaultValues: {
-            otp: "",
-        },
-    });
-
-    const email = sessionStorage.getItem("verifyEmail");
-
-    const onSubmit = async (data) => {
-
-        try {
-
-            const response = await verifyOtp({
-                email,
-                otp: data.otp
-            });
-
-            toast.success(response.message);
-            console.log(response);
-
-            sessionStorage.removeItem("verifyEmail");
-
-            navigate("/Login");
-
-        } catch (error) {
-
-            console.log("Full error:", error);
-
-            console.log("Backend error:", error.response?.data);
-            console.log(error.response?.data?.message)
-
-            toast.error(
-                error.response?.data?.message || "Something went wrong"
-            );
-        }
-
-
-    };
-
-
-
-
-    return (
-        <section className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-gray-100 px-4 py-10">
-            <Card
-                title="ackVerify OTP"
-                subtitle={`Enter the OTP sent to ${email}`}
-            >
-                <form
-                    onSubmit={handleSubmit(onSubmit)}
-                    className="space-y-5"
-                >
-                    <Input
-                        label="OTP"
-                        placeholder="Enter 6-digit OTP"
-                        maxLength={6}
-                        autoComplete="one-time-code"
-                        error={errors.otp?.message}
-                        {...register("otp")}
-                    />
-
-                    <Button
-                        type="submit"
-                        loading={isSubmitting}
-                    >
-                        Verify OTP
-                    </Button>
-                </form>
-            </Card>
-        </section>
-    );
+  return (
+    <div className="center-page">
+      <h1>Verify your email</h1>
+      <form className="auth-card" onSubmit={submit}>
+        <p style={{ margin: 0 }}>We sent a 6-digit code to <strong>{state.email}</strong>. It is valid for 10 minutes.</p>
+        {state.devOtp && <Alert kind="info">Dev mode: the backend returned your OTP, so it is filled in for you.</Alert>}
+        <Alert>{error}</Alert>
+        <input className="otp-input" inputMode="numeric" maxLength={6} required placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} aria-label="6-digit OTP" />
+        <button className="btn" disabled={busy || otp.length !== 6}>{busy ? "Verifying..." : "Verify"}</button>
+        <p className="small muted" style={{ margin: 0 }}>No code? Check the spam folder, or <Link to="/signup">start again</Link>. If the server has no SMTP set up, the code is printed in the backend console.</p>
+      </form>
+    </div>
+  );
 }
-
-
-export default VerifyOTP;

@@ -1,469 +1,71 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
-
-import Card from "../components/common/Card";
-import Button from "../components/common/Button";
-import Input from "../components/common/Input";
-
-import useAuthStore from "../store/auth.store";
-
-import {
-    getProfile,
-    deactivateAccount,
-    deleteAccount,
-} from "../services/auth.service";
-
-
-function Profile() {
-
-
-    const navigate = useNavigate();
-
-
-    const user = useAuthStore(
-        (state) => state.user
-    );
-
-    const login = useAuthStore(
-        (state) => state.login
-    );
-
-    const logout = useAuthStore(
-        (state) => state.logout
-    );
-
-
-
-    const [showDeactivate, setShowDeactivate] = useState(false);
-
-    const [showDelete, setShowDelete] = useState(false);
-
-    const [password, setPassword] = useState("");
-
-
-
-    // Get profile data
-
-    useEffect(() => {
-
-
-        const fetchProfile = async () => {
-
-            try {
-
-
-                const response = await getProfile();
-
-
-                login(response.data);
-
-
-            } catch (error) {
-
-
-                toast.error(
-                    error.response?.data?.message ||
-                    "Failed to load profile"
-                );
-
-
-            }
-
-        };
-
-
-        fetchProfile();
-
-
-    }, [login]);
-
-
-
-
-
-    // Deactivate account
-
-    const handleDeactivate = async () => {
-
-
-        try {
-
-
-            const response = await deactivateAccount();
-
-
-            toast.success(response.message);
-
-
-            logout();
-
-
-            navigate("/login", {
-                replace: true
-            });
-
-
-
-        } catch (error) {
-
-
-            toast.error(
-                error.response?.data?.message ||
-                "Deactivate failed"
-            );
-
-
-        }
-
-
-    };
-
-
-
-
-
-
-    // Delete account
-
-    const handleDelete = async () => {
-
-
-        try {
-
-
-            const response = await deleteAccount({
-                password
-            });
-
-
-            toast.success(response.message);
-
-
-            logout();
-
-
-            navigate("/login", {
-                replace: true
-            });
-
-
-
-        } catch (error) {
-
-
-            toast.error(
-                error.response?.data?.message ||
-                "Delete failed"
-            );
-
-
-        }
-
-
-    };
-
-
-
-
-
-    if (!user) {
-
-        return (
-            <div className="flex justify-center py-20">
-                Loading...
-            </div>
-        );
-
+import { useState } from "react";
+import { api } from "../api.js";
+import { useAuth } from "../auth.jsx";
+import { Alert, Card, fmtDate } from "../components/ui.jsx";
+
+export default function Profile() {
+  const { user, setUser, setFlash } = useAuth();
+  const [username, setUsername] = useState(user.username);
+  const [pw, setPw] = useState({ oldPassword: "", newPassword: "" });
+  const [delPassword, setDelPassword] = useState("");
+  const [msg, setMsg] = useState({ area: "", kind: "error", text: "" });
+  const [busy, setBusy] = useState("");
+
+  const run = (area, fn) => async (e) => {
+    e?.preventDefault();
+    setBusy(area);
+    setMsg({ area, kind: "error", text: "" });
+    try {
+      const text = await fn();
+      if (text) setMsg({ area, kind: "success", text });
+    } catch (err) {
+      setMsg({ area, kind: "error", text: err.message });
+    } finally {
+      setBusy("");
     }
-
-
-
-
-    return (
-
-        <section className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-gray-100 px-4 py-10">
-
-
-            <Card
-                title="My Profile"
-                subtitle="Manage your account"
-            >
-
-
-                <div className="space-y-5">
-
-
-
-                    <div>
-                        <p className="text-sm text-gray-500">
-                            Username
-                        </p>
-
-                        <p className="font-semibold">
-                            {user.username}
-                        </p>
-                    </div>
-
-
-
-
-
-                    <div>
-                        <p className="text-sm text-gray-500">
-                            Email
-                        </p>
-
-                        <p className="font-semibold">
-                            {user.email}
-                        </p>
-                    </div>
-
-
-
-
-
-                    <div>
-                        <p className="text-sm text-gray-500">
-                            Verification
-                        </p>
-
-                        <p className="font-semibold">
-                            {
-                                user.isVerified
-                                ? "Verified"
-                                : "Not Verified"
-                            }
-                        </p>
-                    </div>
-
-
-
-
-
-                    <div>
-                        <p className="text-sm text-gray-500">
-                            Account Status
-                        </p>
-
-                        <p className="font-semibold">
-                            {
-                                user.isActive
-                                ? "Active"
-                                : "Inactive"
-                            }
-                        </p>
-                    </div>
-
-
-
-
-
-                    <div className="flex flex-col gap-3 pt-5">
-
-
-                        <Button
-                            onClick={() =>
-                                navigate("/EditProfile")
-                            }
-                        >
-                            Edit Profile
-                        </Button>
-
-
-
-                        <Button
-                            onClick={() =>
-                                navigate("/change-password")
-                            }
-                        >
-                            Change Password
-                        </Button>
-
-
-
-
-
-                        <Button
-                            onClick={() =>
-                                setShowDeactivate(true)
-                            }
-                        >
-                            Deactivate Account
-                        </Button>
-
-
-
-
-
-                        <Button
-                            onClick={() =>
-                                setShowDelete(true)
-                            }
-                        >
-                            Delete Account
-                        </Button>
-
-
-
-                    </div>
-
-
-                </div>
-
-
-
-            </Card>
-
-
-
-
-
-
-
-            {/* Deactivate Modal */}
-
-
-            {
-                showDeactivate && (
-
-                    <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-
-
-                        <div className="rounded-lg bg-white p-6">
-
-
-                            <h2 className="text-xl font-bold">
-                                Deactivate Account
-                            </h2>
-
-
-                            <p className="mt-3">
-                                Are you sure you want to deactivate?
-                            </p>
-
-
-
-
-                            <div className="mt-5 flex gap-3">
-
-
-                                <Button
-                                    onClick={() =>
-                                        setShowDeactivate(false)
-                                    }
-                                >
-                                    Cancel
-                                </Button>
-
-
-
-                                <Button
-                                    onClick={handleDeactivate}
-                                >
-                                    Confirm
-                                </Button>
-
-
-                            </div>
-
-
-                        </div>
-
-
-                    </div>
-
-                )
-            }
-
-
-
-
-
-
-
-
-
-            {/* Delete Modal */}
-
-
-            {
-                showDelete && (
-
-                    <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-
-
-                        <div className="rounded-lg bg-white p-6">
-
-
-                            <h2 className="text-xl font-bold text-red-600">
-                                Delete Account
-                            </h2>
-
-
-                            <p className="mt-3">
-                                This action cannot be undone.
-                            </p>
-
-
-
-                            <Input
-
-                                label="Password"
-
-                                type="password"
-
-                                value={password}
-
-                                onChange={(e)=>
-                                    setPassword(e.target.value)
-                                }
-
-                            />
-
-
-
-
-
-                            <div className="mt-5 flex gap-3">
-
-
-                                <Button
-                                    onClick={() =>
-                                        setShowDelete(false)
-                                    }
-                                >
-                                    Cancel
-                                </Button>
-
-
-
-                                <Button
-                                    onClick={handleDelete}
-                                >
-                                    Delete
-                                </Button>
-
-
-                            </div>
-
-
-                        </div>
-
-
-                    </div>
-
-                )
-            }
-
-
-
-        </section>
-
-    );
-
+  };
+  const note = (area) => (msg.area === area ? <Alert kind={msg.kind}>{msg.text}</Alert> : null);
+
+  // After these, the server has already revoked every session. Clearing the user makes the route guard send us to /login.
+  const leave = (notice) => { setFlash(notice); setUser(null); };
+
+  return (
+    <>
+      <div className="page-head"><div><h1>Profile</h1><p className="muted">{user.email} · member since {fmtDate(user.createdAt)}</p></div></div>
+
+      <Card title="Username">
+        <form className="stack" onSubmit={run("name", async () => { setUser(await api.updateProfile({ username })); return "Username updated."; })}>
+          {note("name")}
+          <label>Username<input required minLength={3} maxLength={30} pattern="[A-Za-z0-9_]+" value={username} onChange={(e) => setUsername(e.target.value)} /></label>
+          <div><button className="btn" disabled={busy === "name" || username === user.username}>Save</button></div>
+        </form>
+      </Card>
+
+      <Card title="Change password">
+        <form className="stack" onSubmit={run("pw", async () => { await api.changePassword(pw); leave("Password changed. Please log in again."); })}>
+          {note("pw")}
+          <div className="grid grid-2">
+            <label>Current password<input type="password" required autoComplete="current-password" value={pw.oldPassword} onChange={(e) => setPw({ ...pw, oldPassword: e.target.value })} /></label>
+            <label>New password<input type="password" required minLength={8} autoComplete="new-password" value={pw.newPassword} onChange={(e) => setPw({ ...pw, newPassword: e.target.value })} /></label>
+          </div>
+          <span className="hint">8+ characters with upper and lower case, a number and one of @$!%*?&. You will be logged out on all devices.</span>
+          <div><button className="btn" disabled={busy === "pw"}>Change password</button></div>
+        </form>
+      </Card>
+
+      <Card title="Danger zone" className="danger-zone">
+        <div className="stack">
+          {note("danger")}
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <span>Deactivate your account (you can no longer log in).</span>
+            <button className="btn btn-ghost" disabled={busy === "danger"} onClick={() => window.confirm("Deactivate your account?") && run("danger", async () => { await api.deactivate(); leave("Account deactivated."); })()}>Deactivate</button>
+          </div>
+          <form className="row" onSubmit={(e) => { e.preventDefault(); if (window.confirm("Permanently delete your account, resume and all interviews? This cannot be undone.")) run("danger", async () => { await api.deleteAccount(delPassword); leave("Account deleted."); })(); }}>
+            <input type="password" required placeholder="Password to confirm" autoComplete="current-password" style={{ maxWidth: 260 }} value={delPassword} onChange={(e) => setDelPassword(e.target.value)} aria-label="Password to confirm deletion" />
+            <button className="btn btn-danger" disabled={busy === "danger"}>Delete account and all data</button>
+          </form>
+        </div>
+      </Card>
+    </>
+  );
 }
-
-
-
-export default Profile;

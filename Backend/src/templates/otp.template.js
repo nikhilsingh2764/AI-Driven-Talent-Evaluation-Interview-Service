@@ -1,3 +1,5 @@
+import { escapeHtml } from "../utils/escapeHtml.js";
+
 const otpTemplate = (username, otp) => {  
     return `
     <!DOCTYPE html>
@@ -25,7 +27,7 @@ const otpTemplate = (username, otp) => {
 
                         <tr>
                             <td>
-                                <p>Hello <strong>${username}</strong>,</p>
+                                <p>Hello <strong>${escapeHtml(username)}</strong>,</p>
 
                                 <p>
                                     Use the OTP below to verify your email address.

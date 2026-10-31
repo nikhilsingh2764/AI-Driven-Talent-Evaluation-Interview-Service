@@ -1,34 +1,14 @@
-import multer from 'multer';
-import ApiError from '../utils/ApiError.js';
+import multer from "multer";
+import ApiError from "../utils/ApiError.js";
 
-//express middleware that reads form-data and without multer, express cannot read uploaded files.
-//uploaded files is avaialbe in req.file.
-
-const storage = multer.memoryStorage();
-
-//store file in RAM(Memory)
-//after upload to cloudnary, memory is cleared
-
-
-// Allow only PDF files
-const fileFilter = (req, file, cb) => {
-
-    if (file.mimetype === "application/pdf") {
-        cb(null, true);  //no error accept the file
-    } else {
-        cb(new ApiError(400, "Only PDF files are allowed"), false);  //error not accept the file
-    }
-
-}
-
-
-
-const upload = multer({  //create multer middleware
-    storage,    // Uses memory Storage.
-    fileFilter,
-    limits: {
-        fileSize: 5 * 1024 * 1024  // Maximum upload size is 5 MB.
-    }
+// Files are kept in memory only long enough to read the text and hand them to storage.
+const upload = multer({
+    storage: multer.memoryStorage(),
+    fileFilter: (req, file, cb) => {
+        const isPdf = file.mimetype === "application/pdf" || /\.pdf$/i.test(file.originalname);
+        return isPdf ? cb(null, true) : cb(new ApiError(400, "Only PDF files are allowed"), false);
+    },
+    limits: { fileSize: 5 * 1024 * 1024, files: 1 },
 });
 
-export default upload;  //use in route 
+export default upload;

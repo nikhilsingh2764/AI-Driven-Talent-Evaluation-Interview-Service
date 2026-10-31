@@ -1,153 +1,67 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "react-hot-toast";
+import { Link, useNavigate } from "react-router-dom";
+import { api } from "../api.js";
+import { Alert } from "../components/ui.jsx";
 
-import Card from "../components/common/Card";
-import Input from "../components/common/Input";
-import Button from "../components/common/Button";
+// Step 1: ask for an OTP. Step 2: enter OTP + new password.
+export default function ForgotPassword() {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [devOtp, setDevOtp] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-import {
-    forgotPassword,
-    resetPassword,
-} from "../services/auth.service";
+  const run = (fn) => async (e) => {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      await fn();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
-import { forgotPasswordSchema } from "../validation/auth.schema";
+  const requestOtp = run(async () => {
+    const data = await api.forgotPassword(email);
+    if (data?.devOtp) { setDevOtp(data.devOtp); setOtp(data.devOtp); }
+    setStep(2);
+  });
 
-function ForgotPassword() {
+  const reset = run(async () => {
+    await api.resetPassword({ email, otp, newPassword });
+    navigate("/login", { state: { email, notice: "Password reset. Log in with your new password." } });
+  });
 
-    const navigate = useNavigate();
-
-    const [otpSent, setOtpSent] = useState(false);
-    const [email, setEmail] = useState("");
-
-    const {
-        register,
-        handleSubmit,
-        formState: { errors, isSubmitting },
-    } = useForm({
-        resolver: zodResolver(forgotPasswordSchema),
-        defaultValues: {
-            email: "",
-            otp: "",
-            newPassword: "",
-            confirmPassword: "",
-        },
-    });
-
-    const onSubmit = async (data) => {
-
-        try {
-
-            // STEP 1 → Send OTP
-
-            if (!otpSent) {
-
-                const response = await forgotPassword({
-                    email: data.email,
-                });
-
-                toast.success(response.message);
-
-                setEmail(data.email);
-                setOtpSent(true);
-
-                return;
-            }
-
-            // STEP 2 → Reset Password
-
-            const response = await resetPassword({
-                email,
-                otp: data.otp,
-                newPassword: data.newPassword,
-            });
-
-            toast.success(response.message);
-
-            navigate("/login");
-
-        } catch (error) {
-
-            toast.error(
-                error.response?.data?.message ||
-                "Something went wrong"
-            );
-
-        }
-
-    };
-
-    return (
-
-        <section className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-gray-100 px-4 py-10">
-
-            <Card
-                title="Forgot Password"
-                subtitle={
-                    otpSent
-                        ? "Enter OTP and your new password"
-                        : "Enter your registered email"
-                }
-            >
-
-                <form
-                    onSubmit={handleSubmit(onSubmit)}
-                    className="space-y-5"
-                >
-
-                    <Input
-                        label="Email"
-                        placeholder="Enter your email"
-                        disabled={otpSent}
-                        error={errors.email?.message}
-                        {...register("email")}
-                    />
-
-                    {otpSent && (
-                        <>
-                            <Input
-                                label="OTP"
-                                placeholder="Enter OTP"
-                                maxLength={6}
-                                error={errors.otp?.message}
-                                {...register("otp")}
-                            />
-
-                            <Input
-                                type="password"
-                                label="New Password"
-                                placeholder="Enter new password"
-                                error={errors.newPassword?.message}
-                                {...register("newPassword")}
-                            />
-
-                            <Input
-                                type="password"
-                                label="Confirm Password"
-                                placeholder="Confirm password"
-                                error={errors.confirmPassword?.message}
-                                {...register("confirmPassword")}
-                            />
-                        </>
-                    )}
-
-                    <Button
-                        loading={isSubmitting}
-                        type="submit"
-                    >
-                        {otpSent ? "Reset Password" : "Send OTP"}
-                    </Button>
-
-                </form>
-
-            </Card>
-
-        </section>
-
-    );
-
+  return (
+    <div className="center-page">
+      <h1>Reset password</h1>
+      {step === 1 ? (
+        <form className="auth-card" onSubmit={requestOtp}>
+          <Alert>{error}</Alert>
+          <label>Your account email<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+          <button className="btn" disabled={busy}>{busy ? "Sending..." : "Send reset code"}</button>
+          <Link className="small" to="/login">Back to login</Link>
+        </form>
+      ) : (
+        <form className="auth-card" onSubmit={reset}>
+          <Alert kind="info">If <strong>{email}</strong> is registered, a code was sent. It is valid for 10 minutes.</Alert>
+          {devOtp && <Alert kind="info">Dev mode: OTP filled in for you.</Alert>}
+          <Alert>{error}</Alert>
+          <label>6-digit code<input className="otp-input" inputMode="numeric" maxLength={6} required value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} /></label>
+          <label>New password
+            <input type="password" required minLength={8} autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            <span className="hint">8+ characters with upper and lower case, a number and one of @$!%*?&</span>
+          </label>
+          <button className="btn" disabled={busy || otp.length !== 6}>{busy ? "Saving..." : "Reset password"}</button>
+          <button type="button" className="btn btn-ghost" onClick={() => setStep(1)}>Use a different email</button>
+        </form>
+      )}
+    </div>
+  );
 }
-
-export default ForgotPassword;

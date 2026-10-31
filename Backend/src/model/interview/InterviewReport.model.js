@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const InterviewReportSchema = mongoose.Schema({
+const InterviewReportSchema = new mongoose.Schema({
 
     userId: {  //connect to user
         type: mongoose.Schema.Types.ObjectId,
@@ -84,6 +84,10 @@ const InterviewReportSchema = mongoose.Schema({
 
 }, { timestamps: true });
 
+
+// One report per interview session.
+InterviewReportSchema.index({ sessionId: 1 }, { unique: true });
+InterviewReportSchema.index({ userId: 1, createdAt: -1 });
 
 const InterviewReport = mongoose.model("InterviewReport", InterviewReportSchema);
 

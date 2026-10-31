@@ -1,91 +1,45 @@
 import TryCatch from "../../middleware/TryCatch.js";
-import ApiResponse from "../../utils/ApiResponse.js"
-
+import ApiResponse from "../../utils/ApiResponse.js";
 import {
-    createInterviewService, startInterviewSessionService, submitAnswerService,
-    generateInterviewReportService, getInterviewSessionService
+    createInterviewService, listInterviewsService, getInterviewService,
+    startInterviewSessionService, submitAnswerService, getInterviewSessionService,
+    getInterviewReportService,
 } from "../../service/interview/interview.service.js";
 
-
-
-
-
-// Generate Interview Questions
 export const generateInterviewQuestions = TryCatch(async (req, res) => {
-
-    const userId = req.user._id;
     const { role, experience, difficulty } = req.body;
-
-    const Interview = await createInterviewService({
-        userId,
-        role,
-        experience,
-        difficulty
-    })
-
-
-    res.status(201).json(
-        new ApiResponse(201, "Interview questions generated successfully", Interview)
-    )
-
+    const interview = await createInterviewService({ userId: req.user._id, role, experience, difficulty });
+    res.status(201).json(new ApiResponse(201, "Interview questions generated successfully", interview));
 });
 
+export const listInterviews = TryCatch(async (req, res) => {
+    const data = await listInterviewsService(req.user._id);
+    res.status(200).json(new ApiResponse(200, "Interviews fetched successfully", data));
+});
 
+export const getInterview = TryCatch(async (req, res) => {
+    const data = await getInterviewService({ userId: req.user._id, interviewId: req.params.interviewId });
+    res.status(200).json(new ApiResponse(200, "Interview fetched successfully", data));
+});
 
-// Start Interview Session
 export const startInterviewSession = TryCatch(async (req, res) => {
-
-    const userId = req.user._id;
-    const { interviewId } = req.body;
-
-    const session = await startInterviewSessionService({ userId, interviewId });
-
-    res.status(201).json(
-        new ApiResponse(201, "Interview session started successfully", session)
-    )
-
+    const data = await startInterviewSessionService({ userId: req.user._id, interviewId: req.body.interviewId });
+    const status = data.resumed ? 200 : 201;
+    res.status(status).json(new ApiResponse(status, data.resumed ? "Interview session resumed" : "Interview session started successfully", data));
 });
 
-// Submit Answer
 export const submitAnswer = TryCatch(async (req, res) => {
-
-    const userId = req.user._id;
     const { sessionId, answerText } = req.body;
-
-    const answer = await submitAnswerService({ userId, sessionId, answer: answerText });
-
-    res.status(201).json(
-        new ApiResponse(200, "Answer submitted successfully", answer)
-    )
-
-
+    const data = await submitAnswerService({ userId: req.user._id, sessionId, answerText });
+    res.status(200).json(new ApiResponse(200, data.completed ? "Interview completed" : "Answer submitted successfully", data));
 });
 
-
-// Get Current Interview Session
 export const getInterviewSession = TryCatch(async (req, res) => {
-
-    const userId = req.user._id;
-    const { sessionId } = req.params;
-
-    const session = await getInterviewSessionService({
-        userId,
-        sessionId
-    });
-
-    res.status(200).json(
-        new ApiResponse(
-            200,
-            "Interview session fetched successfully",
-            session
-        )
-    );
-
+    const data = await getInterviewSessionService({ userId: req.user._id, sessionId: req.params.sessionId });
+    res.status(200).json(new ApiResponse(200, "Interview session fetched successfully", data));
 });
 
-
-
-
-
-
-
+export const getInterviewReport = TryCatch(async (req, res) => {
+    const report = await getInterviewReportService({ userId: req.user._id, sessionId: req.params.sessionId });
+    res.status(200).json(new ApiResponse(200, "Interview report fetched successfully", report));
+});

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const AnswerSchema = mongoose.Schema({
+const AnswerSchema = new mongoose.Schema({
 
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -60,6 +60,9 @@ const AnswerSchema = mongoose.Schema({
 
 
 }, { timestamps: true });
+
+// One answer per question per session. This also blocks a double submit from saving the same answer twice.
+AnswerSchema.index({ sessionId: 1, questionIndex: 1 }, { unique: true });
 
 const Answer = mongoose.model("Answer", AnswerSchema);
 

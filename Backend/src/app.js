@@ -1,126 +1,66 @@
+import { env } from "./config/env.js";
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
+import mongoose from "mongoose";
 import errorHandler from "./middleware/error.middleware.js";
-
+import ApiError from "./utils/ApiError.js";
 
 import userRouter from "./route/auth/user.routes.js";
-import tokenRoutes  from "./route/auth/token.routes.js"
-import resumeRoutes from "./route/resume/resume.routes.js"
-import analysisRouters from "./route/resume/analysis.routes.js"
-import interviewRouters from "./route/interview/interview.routes.js"
-import performanceRouters from "./route/performance/performance.routes.js"
+import tokenRoutes from "./route/auth/token.routes.js";
+import resumeRoutes from "./route/resume/resume.routes.js";
+import analysisRouters from "./route/resume/analysis.routes.js";
+import interviewRouters from "./route/interview/interview.routes.js";
+import performanceRouters from "./route/performance/performance.routes.js";
 
 const app = express();
 
-//app.use()   //express method used to register/add middleware runs for every incoming requests.
-//parse= read raw data, understand its format and convert into Javascript Object
-
-console.log("APP LOADED");
-
-app.set("trust proxy", 1);
-
-// Security
-app.use(helmet());  //adds security-related HTTP headers to protect an Express application from common web attacks.
-
-
-
-app.use((req, res, next) => {
-    console.log("METHOD:", req.method);
-    console.log("URL:", req.originalUrl);
-    console.log("ORIGIN:", req.headers.origin);
-    next();
-});
-
-/*
-app.use(
-    cors({
-        origin: process.env.CLIENT_URL,
-        credentials: true,
-    })
-);
-*/
+app.set("trust proxy", env.trustProxy); // real client IP (rate limiting) behind reverse proxies; set TRUST_PROXY to the number of proxies
+app.use(helmet());
 
 app.use(
     cors({
-        origin: [
-            process.env.CLIENT_URL,
-            "https://hoppscotch.io"
-        ],
+        origin: (origin, cb) => {
+            // No Origin header = curl / Postman / same-origin requests
+            if (!origin || env.clientUrls.includes(origin)) return cb(null, true);
+            return cb(new ApiError(403, `Origin ${origin} is not allowed by CORS`));
+        },
         credentials: true,
-    })
+    }),
 );
 
-
-
-// Parse/convert JSON into a JavaScript object and stores it in req.body. || frontend -> express.json() -> req.body
-app.use(express.json());
-
-
-
-// Parse URL-encoded Form Data and store in req.body
-app.use(express.urlencoded({ extended: true }));
-
-
-
-// parses cookies from the request and stored in req.cookies.
+app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 app.use(cookieParser());
-
-
-
-// HTTP Request Logger that logs HTTP requests for debugging and monitoring.
-app.use(morgan("dev"));
-
+// Express 5 leaves req.body undefined when a request has no body; controllers expect an object.
 app.use((req, res, next) => {
-    console.log("METHOD:", req.method);
-    console.log("URL:", req.originalUrl);
-    console.log("ORIGIN:", req.headers.origin);
+    req.body ??= {};
     next();
 });
 
+if (process.env.NODE_ENV !== "test") app.use(morgan(env.isProd ? "combined" : "dev"));
 
+app.get("/health", (req, res) => {
+    const dbUp = mongoose.connection.readyState === 1;
+    res.status(dbUp ? 200 : 503).json({ success: dbUp, status: dbUp ? "ok" : "database unavailable", uptime: process.uptime() });
+});
 
-app.use('/api/v1',userRouter);  //routes at last after all middleware because when request come first go to all middleware then come to routes
-app.use('/api/v1',tokenRoutes);
-app.use('/api/v1',resumeRoutes)
-app.use('/api/v1',analysisRouters)
-app.use('/api/v1',interviewRouters)
-app.use('/api/v1',performanceRouters);
+const API = "/api/v1";
+// API answers are per-user. Tell browsers and CDNs (Vercel can cache proxied responses) never to store them.
+app.use(API, (req, res, next) => {
+    res.setHeader("Cache-Control", "no-store");
+    next();
+});
+app.use(API, userRouter);
+app.use(API, tokenRoutes);
+app.use(API, resumeRoutes);
+app.use(API, analysisRouters);
+app.use(API, interviewRouters);
+app.use(API, performanceRouters);
 
-
-
-// Global Error Handler (ALWAYS LAST)
-app.use(errorHandler);
-
+app.use((req, res, next) => next(new ApiError(404, `Route not found: ${req.method} ${req.originalUrl}`)));
+app.use(errorHandler); // always last
 
 export default app;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
