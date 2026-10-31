@@ -4,7 +4,7 @@ import Layout from "./components/Layout.jsx";
 import { Spinner } from "./components/ui.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
-import VerifyOtp from "./pages/VerifyOtp.jsx";
+import VerifyOTP from "./pages/VerifyOTP.jsx"; // Fixed casing here
 import ForgotPassword from "./pages/ForgotPassword.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Resume from "./pages/Resume.jsx";
@@ -33,7 +33,7 @@ export default function App() {
       <Route element={<GuestOnly />}>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/verify" element={<VerifyOtp />} />
+        <Route path="/verify" element={<VerifyOTP />} /> {/* Fixed usage here */}
         <Route path="/forgot-password" element={<ForgotPassword />} />
       </Route>
       <Route element={<Protected />}>
