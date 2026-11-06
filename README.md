@@ -17,7 +17,8 @@
 <p>
   <a href="https://ai-interview-application-26f9.onrender.com">Live API</a> ·
   <a href="https://documenter.getpostman.com/view/39798617/2sBYHPz29y">Postman Collection</a> ·
-  <a href="https://prosspilots.vercel.app/">Frontend Demo</a> ·
+  <a href="https://prosspilots.vercel.app">Frontend Demo</a> ·
+  <a href="https://ai-interview-application-26f9.onrender.com/api/docs">Swagger Docs</a> ·
 </p>
 
 </div>
