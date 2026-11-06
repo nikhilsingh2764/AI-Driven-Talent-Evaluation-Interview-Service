@@ -5,7 +5,7 @@ import { analyzeResume, getAnalysis } from "../../controller/resume/analysis.con
 
 const router = express.Router();
 
-router.post("/resume/analysis", resumeAnalysisLimiter, authMiddleware, analyzeResume);
-router.get("/resume/analysis", apiLimiter, authMiddleware, getAnalysis);
+router.post("/resume/analysis", authMiddleware, resumeAnalysisLimiter, analyzeResume);
+router.get("/resume/analysis", authMiddleware, apiLimiter, getAnalysis);
 
 export default router;

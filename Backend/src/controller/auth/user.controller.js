@@ -1,7 +1,7 @@
 import TryCatch from "../../middleware/TryCatch.js";
 import ApiResponse from "../../utils/ApiResponse.js";
 import {
-    SignupService, LoginService, ProfileService, LogoutService, VerifyOTPService,
+    SignupService, ResendOTPService, LoginService, ProfileService, LogoutService, VerifyOTPService,
     UpdateProfileService, ForgotPasswordService, ResetPasswordService,
     updatePasswordService, DeactivateAccountService, DeleteAccountService,
 } from "../../service/auth/auth.service.js";
@@ -20,6 +20,11 @@ export const Signup = TryCatch(async (req, res) => {
 export const VerifyOTP = TryCatch(async (req, res) => {
     const data = await VerifyOTPService(req.body);
     return res.status(201).json(new ApiResponse(201, "Account created successfully", data));
+});
+
+export const ResendOTP = TryCatch(async (req, res) => {
+    const data = await ResendOTPService(req.body);
+    return res.status(200).json(new ApiResponse(200, "A new OTP has been sent to your email", data));
 });
 
 export const Login = TryCatch(async (req, res) => {

@@ -10,13 +10,19 @@ import { escapeRegex } from "../../utils/escapeHtml.js";
 
 const TTL = 300;
 
+// A performance report is outdated when the interview count changed or any interview report is newer than it.
+const isOutdated = (performanceReport, reports) =>
+    performanceReport.totalInterviews !== reports.length ||
+    reports.some((r) => r.createdAt > performanceReport.updatedAt);
+
 export const generatePerformanceReportService = async ({ userId }) => {
     const reports = await reportRepository.findByUserId(userId); // oldest first
     if (!reports.length) throw new ApiError(404, "Complete at least one interview first");
 
-    // Nothing new since the last report: reuse it instead of paying for another AI call
+    // Nothing changed since the last report: reuse it instead of paying for another AI call.
+    // Comparing only the COUNT is not enough: delete one interview and finish another and the count is the same again.
     const existing = await performanceRepository.findByUserId(userId);
-    if (existing && existing.totalInterviews === reports.length) return existing;
+    if (existing && !isOutdated(existing, reports)) return existing;
 
     const data = await generatePerformanceReportAI({
         performanceData: reports.map((r) => ({
@@ -64,7 +70,7 @@ export const getDashboardService = async ({ userId }) => {
         reportRepository.findByUserId(userId),
     ]);
 
-    const interviews = await interviewRepository.findByUserId(userId);
+    const interviews = await interviewRepository.findByUserId(userId, {}, "role difficulty");
     const roleById = new Map(interviews.map((i) => [String(i._id), i]));
 
     const totalInterviews = reports.length;
@@ -105,7 +111,7 @@ export const getDashboardService = async ({ userId }) => {
             { title: "Download Performance PDF", route: "/performance-report/pdf" },
         ],
         resumeAnalysis,
-        performanceReportOutdated: Boolean(performanceReport && performanceReport.totalInterviews !== totalInterviews),
+        performanceReportOutdated: Boolean(performanceReport && isOutdated(performanceReport, reports)),
     };
 
     await cache.set(key, dashboard, TTL);

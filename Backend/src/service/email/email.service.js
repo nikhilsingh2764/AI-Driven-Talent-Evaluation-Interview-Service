@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import ApiError from "../../utils/ApiError.js";
-import { brevoConfigured, emailConfigured } from "../../config/env.js";
+import { brevoConfigured, emailConfigured, env } from "../../config/env.js";
 
 let transporter = null;
 const getTransporter = () => {
@@ -37,6 +37,11 @@ const sendViaBrevo = async ({ to, subject, html }) => {
 // Throws ApiError(500) if sending fails. When SMTP is not configured (local dev) it logs the email instead of sending.
 const sendEmail = async ({ to, subject, html, devNote }) => {
     if (!emailConfigured()) {
+        // In production never fall back to logging: the log would then contain working login/reset codes.
+        if (env.isProd) {
+            console.error("Email is not configured (set BREVO_API_KEY + EMAIL_FROM, or EMAIL_HOST/USER/PASS). Cannot send:", subject);
+            throw new ApiError(503, "Email delivery is not configured on this server");
+        }
         console.log(`\n[EMAIL not configured: dev mode] To: ${to} | Subject: ${subject}${devNote ? ` | ${devNote}` : ""}\n`);
         return;
     }

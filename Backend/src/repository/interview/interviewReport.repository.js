@@ -16,6 +16,9 @@ class ReportRepository {
     findByUserId(userId) {
         return InterviewReport.find({ userId }).sort({ createdAt: 1 });
     }
+    deleteByInterviewId(interviewId) {
+        return InterviewReport.deleteMany({ interviewId });
+    }
     deleteByUserId(userId) {
         return InterviewReport.deleteMany({ userId });
     }

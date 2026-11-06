@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import ApiError from "../utils/ApiError.js";
 
 // Last middleware: converts any error into a consistent JSON response.
 const errorMiddleware = (err, req, res, _next) => {
@@ -33,7 +34,9 @@ const errorMiddleware = (err, req, res, _next) => {
 
     if (statusCode >= 500) {
         console.error(`[${req.method} ${req.originalUrl}]`, err);
-        if (env.isProd) message = "Internal server error"; // do not leak internals
+        // Hide internals of UNEXPECTED errors only. Deliberate ApiErrors (e.g. "AI provider failed, try again",
+        // "Email delivery is not configured") carry messages written for the user, so they pass through.
+        if (env.isProd && !(err instanceof ApiError)) message = "Internal server error";
     }
 
     return res.status(statusCode).json({ success: false, statusCode, message, errors });

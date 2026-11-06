@@ -1,16 +1,10 @@
-# Frontend
-Frontend/node_modules/
-Frontend/dist/
-Frontend/.env
-
-
-
-# Backend
-Backend/node_modules/
-Backend/.env
-Backend/uploads/
-Backend/test.http
-
-# IDE
-.vscode/
-.idea/
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+coverage/
+*.tsbuildinfo
+Backend/uploads/*
+!Backend/uploads/.gitkeep

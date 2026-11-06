@@ -1,28 +1,34 @@
 import express from "express";
 import {
-    Signup, DeactivateAccount, ForgotPassword, ResetPassword, VerifyOTP,
+    Signup, DeactivateAccount, ForgotPassword, ResetPassword, VerifyOTP, ResendOTP,
     DeleteAccount, Login, Profile, Logout, UpdateProfile, UpdatePassword,
 } from "../../controller/auth/user.controller.js";
 import {
-    signupValidator, verifyOtpValidator, LoginValidator, forgotPasswordValidator,
+    signupValidator, verifyOtpValidator, resendOtpValidator, LoginValidator, forgotPasswordValidator,
     resetPasswordValidator, updateProfileValidator, changePasswordValidator, deleteAccountValidator,
 } from "../../validators/auth.validator.js";
 import validate from "../../middleware/validate.js";
 import authMiddleware from "../../middleware/auth.middleware.js";
-import { apiLimiter, forgotPasswordLimiter, verifyOtpLimiter, signupLimiter, loginLimiter } from "../../middleware/rateLimiter.middleware.js";
+import {
+    apiLimiter, authFloodLimiter, forgotPasswordLimiter, verifyOtpLimiter, resendOtpLimiter, signupLimiter, loginLimiter,
+} from "../../middleware/rateLimiter.middleware.js";
 
 const router = express.Router();
 
-router.post("/signup", signupLimiter, signupValidator, validate, Signup);
-router.post("/verify-otp", verifyOtpLimiter, verifyOtpValidator, validate, VerifyOTP);
-router.post("/login", loginLimiter, LoginValidator, validate, Login);
+// ----- public (per-IP flood ceiling + a per-email limiter on each endpoint) -----
+router.post("/signup", authFloodLimiter, signupLimiter, signupValidator, validate, Signup);
+router.post("/verify-otp", authFloodLimiter, verifyOtpLimiter, verifyOtpValidator, validate, VerifyOTP);
+router.post("/resend-otp", authFloodLimiter, resendOtpLimiter, resendOtpValidator, validate, ResendOTP);
+router.post("/login", authFloodLimiter, loginLimiter, LoginValidator, validate, Login);
 router.post("/logout", Logout); // works even with an expired access token, so a client can always sign out
-router.get("/profile", apiLimiter, authMiddleware, Profile);
-router.patch("/update-profile", apiLimiter, authMiddleware, updateProfileValidator, validate, UpdateProfile);
-router.patch("/change-password", apiLimiter, authMiddleware, changePasswordValidator, validate, UpdatePassword);
-router.patch("/deactivate-account", apiLimiter, authMiddleware, DeactivateAccount);
-router.delete("/delete-account", apiLimiter, authMiddleware, deleteAccountValidator, validate, DeleteAccount);
-router.post("/forgot-password", forgotPasswordLimiter, forgotPasswordValidator, validate, ForgotPassword);
-router.post("/reset-password", verifyOtpLimiter, resetPasswordValidator, validate, ResetPassword);
+router.post("/forgot-password", authFloodLimiter, forgotPasswordLimiter, forgotPasswordValidator, validate, ForgotPassword);
+router.post("/reset-password", authFloodLimiter, verifyOtpLimiter, resetPasswordValidator, validate, ResetPassword);
+
+// ----- signed in (authMiddleware first, so the limiter can count per user instead of per IP) -----
+router.get("/profile", authMiddleware, apiLimiter, Profile);
+router.patch("/update-profile", authMiddleware, apiLimiter, updateProfileValidator, validate, UpdateProfile);
+router.patch("/change-password", authMiddleware, apiLimiter, changePasswordValidator, validate, UpdatePassword);
+router.patch("/deactivate-account", authMiddleware, apiLimiter, DeactivateAccount);
+router.delete("/delete-account", authMiddleware, apiLimiter, deleteAccountValidator, validate, DeleteAccount);
 
 export default router;

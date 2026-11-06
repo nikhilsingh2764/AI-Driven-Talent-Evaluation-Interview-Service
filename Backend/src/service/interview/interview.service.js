@@ -158,7 +158,15 @@ const buildReport = async ({ userId, sessionId }) => {
     }
 };
 
-export const submitAnswerService = async ({ userId, sessionId, answerText }) => {
+// Finishes a half-done "save answer + move on" (e.g. the server stopped between the two writes). Without this, the
+// stored answer would block the user on a 409 forever. advanceIfAt is atomic, so concurrent callers cannot double-advance.
+const healSession = async ({ session, interview, index, userId }) => {
+    const isLast = index + 1 >= total(interview);
+    const advanced = await sessionRepository.advanceIfAt(session._id, userId, index, isLast ? "COMPLETED" : "STARTED");
+    if (advanced && isLast) await interviewRepository.updateStatus(interview._id, "COMPLETED");
+};
+
+export const submitAnswerService = async ({ userId, sessionId, answerText, questionIndex }) => {
     const session = await sessionRepository.findSessionByIdAndOwner(sessionId, userId);
     if (!session) throw new ApiError(404, "Interview session not found");
     const interview = await interviewRepository.findById(session.interviewId);
@@ -169,6 +177,11 @@ export const submitAnswerService = async ({ userId, sessionId, answerText }) => 
     }
 
     const index = session.currentQuestionIndex;
+    // The client says which question it is answering. A double click / second tab / stale page is rejected here,
+    // instead of its answer being stored against the next question.
+    if (questionIndex !== undefined && questionIndex !== index) {
+        throw new ApiError(409, "That question was already answered. Reload to continue", [{ field: "currentQuestionIndex", message: String(index) }]);
+    }
     const question = interview.questions[index];
     if (!question) throw new ApiError(400, "There is no question left to answer");
 
@@ -185,7 +198,10 @@ export const submitAnswerService = async ({ userId, sessionId, answerText }) => 
             answerText: answerText.trim(),
         });
     } catch (error) {
-        if (error.code === 11000) throw new ApiError(409, "This question was already answered");
+        if (error.code === 11000) {
+            await healSession({ session, interview, index, userId });
+            throw new ApiError(409, "This question was already answered. Reload to continue");
+        }
         throw error;
     }
 
@@ -230,4 +246,19 @@ export const getInterviewReportService = async ({ userId, sessionId }) => {
     if (!session) throw new ApiError(404, "Interview session not found");
     if (session.status !== "COMPLETED") throw new ApiError(409, "Finish all questions to get the report");
     return buildReport({ userId, sessionId: session._id });
+};
+
+// Deletes one interview with its sessions, answers and report. The performance report is regenerated on demand.
+export const deleteInterviewService = async ({ userId, interviewId }) => {
+    const interview = await interviewRepository.findByIdAndUserId(interviewId, userId);
+    if (!interview) throw new ApiError(404, "Interview not found");
+
+    await Promise.all([
+        answerRepository.deleteByInterviewId(interview._id),
+        reportRepository.deleteByInterviewId(interview._id),
+        sessionRepository.deleteByInterviewId(interview._id),
+    ]);
+    await interviewRepository.delete(interview._id);
+    await cache.invalidateUser(userId);
+    return null;
 };

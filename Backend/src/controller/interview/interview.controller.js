@@ -3,7 +3,7 @@ import ApiResponse from "../../utils/ApiResponse.js";
 import {
     createInterviewService, listInterviewsService, getInterviewService,
     startInterviewSessionService, submitAnswerService, getInterviewSessionService,
-    getInterviewReportService,
+    getInterviewReportService, deleteInterviewService,
 } from "../../service/interview/interview.service.js";
 
 export const generateInterviewQuestions = TryCatch(async (req, res) => {
@@ -29,8 +29,8 @@ export const startInterviewSession = TryCatch(async (req, res) => {
 });
 
 export const submitAnswer = TryCatch(async (req, res) => {
-    const { sessionId, answerText } = req.body;
-    const data = await submitAnswerService({ userId: req.user._id, sessionId, answerText });
+    const { sessionId, answerText, questionIndex } = req.body;
+    const data = await submitAnswerService({ userId: req.user._id, sessionId, answerText, questionIndex });
     res.status(200).json(new ApiResponse(200, data.completed ? "Interview completed" : "Answer submitted successfully", data));
 });
 
@@ -42,4 +42,9 @@ export const getInterviewSession = TryCatch(async (req, res) => {
 export const getInterviewReport = TryCatch(async (req, res) => {
     const report = await getInterviewReportService({ userId: req.user._id, sessionId: req.params.sessionId });
     res.status(200).json(new ApiResponse(200, "Interview report fetched successfully", report));
+});
+
+export const deleteInterview = TryCatch(async (req, res) => {
+    await deleteInterviewService({ userId: req.user._id, interviewId: req.params.interviewId });
+    res.status(200).json(new ApiResponse(200, "Interview deleted successfully", null));
 });

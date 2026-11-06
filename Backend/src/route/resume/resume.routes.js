@@ -8,10 +8,10 @@ import { uploadResume, fetchResume, replaceResume, deleteResume, downloadResumeF
 
 const router = express.Router();
 
-router.post("/resume/upload", uploadResumeLimiter, authMiddleware, upload.single("resume"), uploadResumeValidator, validate, uploadResume);
-router.get("/resume", apiLimiter, authMiddleware, fetchResume);
-router.get("/resume/file", apiLimiter, authMiddleware, downloadResumeFile);
-router.patch("/resume", ReplaceResumeLimiter, authMiddleware, upload.single("resume"), replaceResumeValidator, validate, replaceResume);
-router.delete("/resume", DeleteResumeLimiter, authMiddleware, deleteResume);
+router.post("/resume/upload", authMiddleware, uploadResumeLimiter, upload.single("resume"), uploadResumeValidator, validate, uploadResume);
+router.get("/resume", authMiddleware, apiLimiter, fetchResume);
+router.get("/resume/file", authMiddleware, apiLimiter, downloadResumeFile);
+router.patch("/resume", authMiddleware, ReplaceResumeLimiter, upload.single("resume"), replaceResumeValidator, validate, replaceResume);
+router.delete("/resume", authMiddleware, DeleteResumeLimiter, deleteResume);
 
 export default router;
