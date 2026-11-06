@@ -9,9 +9,10 @@ export const SALT_ROUNDS = 10;
 export const OTP_TTL_MS = 10 * 60 * 1000;
 
 // Creates and emails an OTP. Returns the plain code only so callers can expose it in dev mode.
-const sendOTPService = async ({ username = null, email, password = null, type }) => {
+// `passwordHash` lets "resend code" reuse the hash stored at signup, so the user is not asked for the password again.
+const sendOTPService = async ({ username = null, email, password = null, passwordHash = null, type }) => {
     // Only signup carries a password (stored hashed until the OTP is verified)
-    const hashedPassword = type === "EMAIL_VERIFICATION" ? await bcrypt.hash(password, SALT_ROUNDS) : null;
+    const hashedPassword = passwordHash ?? (type === "EMAIL_VERIFICATION" ? await bcrypt.hash(password, SALT_ROUNDS) : null);
 
     const otp = generateOTP();
 

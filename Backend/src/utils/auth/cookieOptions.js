@@ -6,7 +6,7 @@ const base = () => ({
     sameSite: env.cookieSameSite,
 });
 
-export const accessTokenOptions = { ...base(), maxAge: 15 * 60 * 1000 };
+export const accessTokenOptions = { ...base(), maxAge: env.accessTtlMs };
 export const refreshTokenOptions = { ...base(), maxAge: env.refreshTtlMs };
 
 // clearCookie must use the same options (without maxAge) or some browsers keep the cookie.

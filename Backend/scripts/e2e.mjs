@@ -1,7 +1,9 @@
 // End-to-end check of the whole API against a RUNNING server.
 //   1. Start the backend with EXPOSE_OTP_IN_RESPONSE=true and RATE_LIMIT_DISABLED=true (see .env.example)
-//   2. npm run e2e            (optional: BASE_URL=http://localhost:5000)
+//   2. npm run e2e            (optional: BASE_URL=http://localhost:5000, MONGODB_URI=... for the DB-level checks)
+// Easier: `npm run test:e2e` starts a throw-away server and database for you and runs this file.
 import PDFDocument from "pdfkit";
+import mongoose from "mongoose";
 
 const BASE = (process.env.BASE_URL || "http://localhost:5000") + "/api/v1";
 let passed = 0;
@@ -63,6 +65,13 @@ const pdfForm = async (text = RESUME, name = "resume.pdf", type = "application/p
     return f;
 };
 
+// Optional direct database access for the checks that need to simulate a crash / age a record.
+let DB = null;
+if (process.env.MONGODB_URI) {
+    await mongoose.connect(process.env.MONGODB_URI);
+    DB = mongoose.connection.db;
+}
+
 const rand = Math.random().toString(36).slice(2, 8);
 const PASS = "Passw0rd@123";
 
@@ -88,7 +97,7 @@ const run = async () => {
     check("signup rejects weak password", (await a.post("/signup", { username: "abcd", email: "a@b.co", password: "weak" })).status === 400);
     const u = await signupAndLogin(a, "a");
     check("signup returns 201 with OTP", u.signup.status === 201);
-    check("duplicate signup is blocked (409)", (await a.post("/signup", { username: u.username + "x", email: u.email, password: PASS })).status === 409 || true);
+    check("duplicate signup is blocked (409)", (await a.post("/signup", { username: u.username + "x", email: u.email, password: PASS })).status === 409);
     check("verify-otp creates the account (201)", u.verify.status === 201);
     check("verify response does NOT leak the password hash", !JSON.stringify(u.verify.data).includes("$2"));
     check("login succeeds and sets cookies", u.login.status === 200 && a.cookies.accessToken && a.cookies.refreshToken);
@@ -280,6 +289,109 @@ const run = async () => {
     check("malformed JSON is 400, not 500", bj.status === 400);
     const nb = await fetch(BASE + "/login", { method: "POST" });
     check("POST with no body is 400, not a crash", nb.status === 400);
+
+    {
+    // ───────────────────────── regression checks for bugs found in the code review ─────────────────────────
+    console.log("\n[hardening: email, password, resend OTP]");
+    const plus = new Client();
+    const plusEmail = `plus_${rand}+tag@example.com`;
+    const ps = await plus.post("/signup", { username: `plus_${rand}`, email: plusEmail, password: PASS });
+    check("'+tag' in an email is kept (it used to be silently stripped)", ps.data?.data?.email === plusEmail);
+    check("resend-otp right after signup is rate-limited by a cooldown (429)", (await plus.post("/resend-otp", { email: plusEmail })).status === 429);
+    check("resend-otp for an unknown email is 400", (await plus.post("/resend-otp", { email: `nobody_${rand}@example.com` })).status === 400);
+    if (DB) {
+        await DB.collection("otps").updateMany({ email: plusEmail }, { $set: { createdAt: new Date(Date.now() - 120_000) } });
+        const rs = await plus.post("/resend-otp", { email: plusEmail });
+        check("resend-otp works once the cooldown has passed", rs.status === 200 && /^\d{6}$/.test(rs.data?.data?.devOtp || ""));
+        check("the OLD code stops working after a resend", (await plus.post("/verify-otp", { email: plusEmail, otp: ps.data.data.devOtp })).status === 400);
+        check("the NEW code verifies the account (password hash was reused)", (await plus.post("/verify-otp", { email: plusEmail, otp: rs.data.data.devOtp })).status === 201);
+        check("login works with the '+tag' address", (await plus.post("/login", { email: plusEmail, password: PASS })).status === 200);
+    }
+    const sym = new Client();
+    const symEmail = `sym_${rand}@example.com`;
+    check("any symbol counts as a special character in passwords", (await sym.post("/signup", { username: `sym_${rand}`, email: symEmail, password: "Passw0rd#2024" })).status === 201);
+
+    console.log("\n[hardening: login does not leak account state]");
+    const dz = new Client();
+    const dzu = await signupAndLogin(dz, "dz");
+    await dz.patch("/deactivate-account", {});
+    check("deactivated account + WRONG password looks like any wrong password (400)", (await new Client().post("/login", { email: dzu.email, password: "Wrong@1234" })).status === 400);
+    check("deactivated account + right password is 403", (await new Client().post("/login", { email: dzu.email, password: PASS })).status === 403);
+    const ck = await signupAndLogin(new Client(), "ck");
+    const raw = await fetch(BASE + "/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: ck.email, password: PASS }) });
+    const accessCookie = (raw.headers.getSetCookie() || []).find((c) => c.startsWith("accessToken="));
+    check("access cookie lifetime follows ACCESS_TOKEN_EXPIRES_IN (15m = 900s)", /max-age=900/i.test(accessCookie || ""));
+
+    console.log("\n[hardening: interview answers]");
+    const hc = new Client();
+    await signupAndLogin(hc, "h");
+    await hc.call("POST", "/resume/upload", { form: await pdfForm() });
+    await hc.post("/resume/analysis", {});
+    const mk = async (role) => {
+        const gi = await hc.post("/interview/generate", { role, experience: "2 years", difficulty: "Medium" });
+        const st = await hc.post("/session/start", { interviewId: gi.data.data._id });
+        return { interviewId: gi.data.data._id, sessionId: st.data.data.session._id };
+    };
+    const I1 = await mk("Backend Developer");
+    const ans = (sessionId, questionIndex, text = "I would profile first, then fix the slowest query and measure again.") =>
+        hc.post("/answer", { sessionId, answerText: text, ...(questionIndex === undefined ? {} : { questionIndex }) });
+
+    check("answering a question that is not current is 409", (await ans(I1.sessionId, 3)).status === 409);
+    check("answering the current question works", (await ans(I1.sessionId, 0)).status === 200);
+    check("re-sending the same question is 409 (not stored as answer 2)", (await ans(I1.sessionId, 0)).status === 409);
+    const dbl = await Promise.all([ans(I1.sessionId, 1), ans(I1.sessionId, 1)]);
+    check("a double click records ONE answer (one 200, one 409)", dbl.map((r) => r.status).sort().join() === "200,409");
+    const sessNow = await hc.get(`/session/${I1.sessionId}`);
+    check("session moved exactly to question 3 (index 2)", sessNow.data.data.session.currentQuestionIndex === 2);
+
+    if (DB) {
+        const idx = sessNow.data.data.session.currentQuestionIndex;
+        const interview = await DB.collection("interviews").findOne({ _id: new mongoose.Types.ObjectId(I1.interviewId) });
+        const sessionDoc = await DB.collection("interviewsessions").findOne({ _id: new mongoose.Types.ObjectId(I1.sessionId) });
+        await DB.collection("answers").insertOne({
+            userId: sessionDoc.userId, sessionId: sessionDoc._id, interviewId: sessionDoc.interviewId, questionIndex: idx,
+            question: interview.questions[idx].question, category: interview.questions[idx].category,
+            answerText: "saved, but the server stopped before moving on", createdAt: new Date(), updatedAt: new Date(),
+        });
+        check("a half-saved answer gives 409 once...", (await ans(I1.sessionId, idx)).status === 409);
+        const healed = await hc.get(`/session/${I1.sessionId}`);
+        check("...and the session HEALS (it used to be stuck on 409 forever)", healed.data.data.session.currentQuestionIndex === idx + 1);
+    }
+    let last;
+    for (let i = 0; i < 10; i++) {
+        const cur = await hc.get(`/session/${I1.sessionId}`);
+        if (cur.data.data.session.status === "COMPLETED") break;
+        last = await ans(I1.sessionId, cur.data.data.session.currentQuestionIndex);
+    }
+    check("the interview can be finished and returns a report", last?.data?.data?.completed === true && !!last.data.data.report);
+
+    console.log("\n[hardening: delete interview, stale performance report]");
+    const perf1 = await hc.post("/performance/generate", {});
+    check("performance report generated for 1 interview", perf1.status === 200 && perf1.data.data.totalInterviews === 1);
+    const finish = async (role) => {
+        const I = await mk(role);
+        for (let i = 0; i < 10; i++) await ans(I.sessionId, i);
+        return I;
+    };
+    const I2 = await finish("Frontend Developer");
+    check("dashboard flags the performance report as outdated after a new interview", (await hc.get("/dashboard")).data.data.performanceReportOutdated === true);
+    const perf2 = await hc.post("/performance/generate", {});
+    check("regenerated for 2 interviews", perf2.data.data.totalInterviews === 2);
+    check("another user cannot delete my interview (404)", (await b.del(`/interview/${I2.interviewId}`)).status === 404);
+    check("delete interview works", (await hc.del(`/interview/${I1.interviewId}`)).status === 200);
+    check("deleted interview is gone (404)", (await hc.get(`/interview/${I1.interviewId}`)).status === 404);
+    check("its session is gone too (404)", (await hc.get(`/session/${I1.sessionId}`)).status === 404);
+    const I3 = await finish("Full Stack Developer");
+    const perf3 = await hc.post("/performance/generate", {});
+    check("count is 2 again, but the report is REGENERATED, not reused stale", perf3.data.data.totalInterviews === 2 && new Date(perf3.data.data.updatedAt) > new Date(perf2.data.data.updatedAt));
+    check("history lists exactly the 2 remaining interviews", (await hc.get("/history")).data.data.total === 2 && !!I3);
+
+    console.log("\n[docs]");
+    const docs = await fetch(BASE.replace("/api/v1", "/api/docs/"));
+    check("Swagger UI is served at /api/docs", docs.status === 200);
+    const spec = await fetch(BASE.replace("/api/v1", "/api/docs.json")).then((r) => r.json());
+    check("the OpenAPI spec is served at /api/docs.json", spec.openapi === "3.0.3" && !!spec.paths["/answer"]);
+    }
 };
 
 try {
@@ -288,6 +400,7 @@ try {
     console.error("\nTest run aborted:", error.message);
     failures.push("aborted: " + error.message);
 }
+if (DB) await mongoose.disconnect();
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) console.log("Failed:\n - " + failures.join("\n - "));
 process.exit(failures.length ? 1 : 0);

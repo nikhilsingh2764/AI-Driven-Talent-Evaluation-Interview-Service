@@ -12,6 +12,7 @@ const start = async () => {
 
         const server = app.listen(env.port, () => {
             console.log(`Server running at http://localhost:${env.port}`);
+            if (env.swaggerEnabled) console.log(`API docs:       http://localhost:${env.port}/api/docs`);
             console.log(`Storage: ${storageProvider()} | Email: ${emailMode()} | AI: ${aiMockEnabled() ? "MOCK" : "OpenRouter"}`);
             if (env.isProd) {
                 if (!emailConfigured()) console.warn("WARNING: no email provider configured. Signup OTP emails will NOT be delivered (set BREVO_API_KEY + EMAIL_FROM, or SMTP).");

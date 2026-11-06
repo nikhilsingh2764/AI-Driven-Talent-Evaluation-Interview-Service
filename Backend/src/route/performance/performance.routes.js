@@ -9,10 +9,10 @@ import { generatePerformanceReportLimiter, apiLimiter } from "../../middleware/r
 
 const router = express.Router();
 
-router.post("/performance/generate", generatePerformanceReportLimiter, authMiddleware, generatePerformanceReport);
-router.get("/performance", apiLimiter, authMiddleware, getPerformanceReport);
-router.get("/performance/pdf", apiLimiter, authMiddleware, downloadPerformanceReport);
-router.get("/history", apiLimiter, authMiddleware, historyQueryValidator, validate, getInterviewHistory);
-router.get("/dashboard", apiLimiter, authMiddleware, getDashboard);
+router.post("/performance/generate", authMiddleware, generatePerformanceReportLimiter, generatePerformanceReport);
+router.get("/performance", authMiddleware, apiLimiter, getPerformanceReport);
+router.get("/performance/pdf", authMiddleware, apiLimiter, downloadPerformanceReport);
+router.get("/history", authMiddleware, apiLimiter, historyQueryValidator, validate, getInterviewHistory);
+router.get("/dashboard", authMiddleware, apiLimiter, getDashboard);
 
 export default router;

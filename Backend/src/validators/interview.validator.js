@@ -11,6 +11,9 @@ export const startSessionValidator = [body("interviewId").isMongoId().withMessag
 export const submitAnswerValidator = [
     body("sessionId").isMongoId().withMessage("A valid sessionId is required"),
     body("answerText").isString().trim().isLength({ min: 1, max: 5000 }).withMessage("Answer is required (max 5000 characters)"),
+    // Optional but recommended: the question the client is answering. A double click or a stale tab is rejected
+    // with 409 instead of being recorded as the answer to the NEXT question.
+    body("questionIndex").optional().isInt({ min: 0, max: 99 }).withMessage("questionIndex must be a whole number").toInt(),
 ];
 
 export const sessionIdParam = [param("sessionId").isMongoId().withMessage("Invalid sessionId")];
@@ -19,6 +22,7 @@ export const interviewIdParam = [param("interviewId").isMongoId().withMessage("I
 export const historyQueryValidator = [
     query("page").optional().isInt({ min: 1 }).withMessage("page must be 1 or more").toInt(),
     query("limit").optional().isInt({ min: 1, max: 50 }).withMessage("limit must be between 1 and 50").toInt(),
+    query("search").optional().trim().isLength({ max: 100 }).withMessage("search is too long"),
     query("sort").optional().isIn(["latest", "oldest", "highest-score", "lowest-score"]).withMessage("Invalid sort"),
     query("difficulty").optional({ values: "falsy" }).isIn(["Easy", "Medium", "Hard"]).withMessage("Invalid difficulty"),
     query("category").optional({ values: "falsy" }).isIn(["Technical", "Behavioral", "System Design", "HR"]).withMessage("Invalid category"),

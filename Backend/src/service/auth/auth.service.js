@@ -19,6 +19,10 @@ import { hashValue, safeEqual } from "../../utils/auth/generateOTP.js";
 import { deleteResumeFile } from "../../utils/upload/storage.js";
 import welcomeTemplate from "../../templates/welcome.template.js";
 
+// Burns the same CPU time when the email is unknown, so response time does not reveal which emails are registered.
+const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", SALT_ROUNDS);
+const RESEND_COOLDOWN_MS = 60 * 1000;
+
 const MAX_OTP_ATTEMPTS = 5;
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_MS = 15 * 60 * 1000;
@@ -61,6 +65,19 @@ export const SignupService = async ({ username, email, password }) => {
     return env.exposeOtp ? { email, devOtp: otp } : { email };
 };
 
+// "Resend code" for a signup that is waiting for its OTP. Reuses the stored password hash and enforces a cooldown.
+export const ResendOTPService = async ({ email }) => {
+    email = email.trim().toLowerCase();
+    const pending = await otpRepository.findByEmailAndType(email, "EMAIL_VERIFICATION");
+    if (!pending) throw new ApiError(400, "Your signup expired. Please sign up again");
+
+    const waitMs = RESEND_COOLDOWN_MS - (Date.now() - pending.createdAt.getTime());
+    if (waitMs > 0) throw new ApiError(429, `Please wait ${Math.ceil(waitMs / 1000)} seconds before requesting another code`);
+
+    const otp = await sendOTPService({ username: pending.username, email, passwordHash: pending.password, type: "EMAIL_VERIFICATION" });
+    return env.exposeOtp ? { email, devOtp: otp } : { email };
+};
+
 export const VerifyOTPService = async ({ email, otp }) => {
     email = email.trim().toLowerCase();
     const otpData = await otpRepository.findByEmailAndType(email, "EMAIL_VERIFICATION");
@@ -83,24 +100,28 @@ export const LoginService = async ({ email, password }) => {
     email = email.trim().toLowerCase();
 
     const user = await userRepository.findByEmail(email);
-    if (!user) throw new ApiError(400, "Invalid email or password");
-    if (!user.isVerified) throw new ApiError(403, "Please verify your email first");
-    if (!user.isActive) throw new ApiError(403, "Account is deactivated");
+    // Always run bcrypt (against a dummy hash for unknown emails) so timing does not reveal whether the email exists
+    const passwordMatches = await bcrypt.compare(password, user?.password ?? DUMMY_HASH);
 
     // A lock that has run out is cleared, so one wrong password afterwards does not instantly re-lock
-    if (user.lockUntil && user.lockUntil <= new Date()) {
+    if (user?.lockUntil && user.lockUntil <= new Date()) {
         await userRepository.resetLoginFailures(user._id);
         user.failedLoginAttempts = 0;
         user.lockUntil = null;
     }
-    if (user.lockUntil && user.lockUntil > new Date()) {
+    if (user?.lockUntil && user.lockUntil > new Date()) {
         throw new ApiError(423, "Account temporarily locked after too many failed attempts. Try again later");
     }
 
-    if (!(await bcrypt.compare(password, user.password))) {
-        await userRepository.registerFailedLogin(user._id, MAX_LOGIN_ATTEMPTS, LOCK_MS);
+    if (!user || !passwordMatches) {
+        if (user) await userRepository.registerFailedLogin(user._id, MAX_LOGIN_ATTEMPTS, LOCK_MS);
         throw new ApiError(400, "Invalid email or password");
     }
+
+    // Account state is revealed only to someone who knows the password (otherwise a stranger could probe which emails
+    // are registered / deactivated).
+    if (!user.isVerified) throw new ApiError(403, "Please verify your email first");
+    if (!user.isActive) throw new ApiError(403, "Account is deactivated");
 
     if (user.failedLoginAttempts > 0 || user.lockUntil) await userRepository.resetLoginFailures(user._id);
 

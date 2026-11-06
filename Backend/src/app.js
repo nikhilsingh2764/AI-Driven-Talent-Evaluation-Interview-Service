@@ -7,6 +7,8 @@ import morgan from "morgan";
 import mongoose from "mongoose";
 import errorHandler from "./middleware/error.middleware.js";
 import ApiError from "./utils/ApiError.js";
+import redis from "./config/redis.js";
+import { mountSwagger } from "./docs/swagger.js";
 
 import userRouter from "./route/auth/user.routes.js";
 import tokenRoutes from "./route/auth/token.routes.js";
@@ -18,6 +20,9 @@ import performanceRouters from "./route/performance/performance.routes.js";
 const app = express();
 
 app.set("trust proxy", env.trustProxy); // real client IP (rate limiting) behind reverse proxies; set TRUST_PROXY to the number of proxies
+// Swagger UI needs inline scripts, so it is mounted before Helmet's strict CSP.
+if (env.swaggerEnabled) mountSwagger(app);
+
 app.use(helmet());
 
 app.use(
@@ -44,7 +49,16 @@ if (process.env.NODE_ENV !== "test") app.use(morgan(env.isProd ? "combined" : "d
 
 app.get("/health", (req, res) => {
     const dbUp = mongoose.connection.readyState === 1;
-    res.status(dbUp ? 200 : 503).json({ success: dbUp, status: dbUp ? "ok" : "database unavailable", uptime: process.uptime() });
+    res.status(dbUp ? 200 : 503).json({
+        success: dbUp,
+        status: dbUp ? "ok" : "database unavailable",
+        cache: redis ? "redis" : "memory",
+        uptime: process.uptime(),
+    });
+});
+
+app.get("/", (req, res) => {
+    res.json({ name: "AI Interview API", health: "/health", docs: env.swaggerEnabled ? "/api/docs" : null, api: "/api/v1" });
 });
 
 const API = "/api/v1";

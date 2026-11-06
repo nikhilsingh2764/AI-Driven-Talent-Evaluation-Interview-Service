@@ -7,6 +7,9 @@ class AnswerRepository {
     findBySessionId(sessionId) {
         return Answer.find({ sessionId }).sort({ questionIndex: 1 });
     }
+    deleteByInterviewId(interviewId) {
+        return Answer.deleteMany({ interviewId });
+    }
     deleteByUserId(userId) {
         return Answer.deleteMany({ userId });
     }

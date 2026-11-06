@@ -14,8 +14,9 @@ class InterviewRepository {
     findByIdAndUserId(interviewId, userId) {
         return Interview.findOne({ _id: interviewId, userId });
     }
-    findByUserId(userId, filter = {}) {
-        return Interview.find({ userId, ...filter }).sort({ createdAt: -1 });
+    // `select` limits the fields (the `questions` array is the heavy part)
+    findByUserId(userId, filter = {}, select = "") {
+        return Interview.find({ userId, ...filter }).select(select).sort({ createdAt: -1 });
     }
     updateStatus(interviewId, status) {
         return Interview.findByIdAndUpdate(interviewId, { status }, { returnDocument: "after" });

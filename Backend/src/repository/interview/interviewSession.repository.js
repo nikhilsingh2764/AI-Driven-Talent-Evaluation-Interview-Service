@@ -27,6 +27,9 @@ class SessionRepository {
             { returnDocument: "after" },
         );
     }
+    deleteByInterviewId(interviewId) {
+        return InterviewSession.deleteMany({ interviewId });
+    }
     deleteByUserId(userId) {
         return InterviewSession.deleteMany({ userId });
     }

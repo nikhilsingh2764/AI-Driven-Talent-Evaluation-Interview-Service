@@ -1,0 +1,71 @@
+@import "@fontsource-variable/sora/index.css";
+@import "@fontsource-variable/onest/index.css";
+@import "@fontsource-variable/jetbrains-mono/index.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Colour tokens are RGB triplets so Tailwind can apply opacity (bg-primary/10). */
+:root {
+  --c-bg: 245 245 247;
+  --c-surface: 255 255 255;
+  --c-sunken: 236 237 241;
+  --c-ink: 20 22 31;
+  --c-muted: 96 102 118;
+  --c-line: 224 226 232;
+  --c-primary: 217 58 28;
+  --c-primary-ink: 255 255 255;
+  --c-primary-soft: 253 236 230;
+  --c-accent: 37 99 235;
+  --c-danger: 200 40 40;
+  --c-danger-soft: 252 233 233;
+  --c-success: 21 128 80;
+  --c-warn: 180 110 5;
+  color-scheme: light;
+}
+
+.dark {
+  --c-bg: 15 17 21;
+  --c-surface: 23 26 33;
+  --c-sunken: 30 34 43;
+  --c-ink: 236 238 243;
+  --c-muted: 148 154 170;
+  --c-line: 42 47 58;
+  --c-primary: 255 107 74;
+  --c-primary-ink: 30 10 5;
+  --c-primary-soft: 58 28 22;
+  --c-accent: 96 150 255;
+  --c-danger: 245 110 110;
+  --c-danger-soft: 60 28 30;
+  --c-success: 72 200 140;
+  --c-warn: 240 180 70;
+  color-scheme: dark;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-bg font-sans text-ink antialiased; }
+  h1, h2, h3 { @apply font-display tracking-tight; }
+  :focus-visible { @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-bg; }
+  ::selection { background: rgb(var(--c-primary) / 0.22); }
+  button { @apply cursor-pointer disabled:cursor-not-allowed; }
+}
+
+@layer components {
+  .field-input {
+    @apply w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted/70
+      transition-colors hover:border-muted/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25;
+  }
+  .card { @apply rounded-2xl border border-line bg-surface; }
+}
+
+@keyframes caret { 50% { opacity: 0; } }
+.caret::after { content: ""; display: inline-block; width: 2px; height: 1.05em; margin-left: 2px; vertical-align: -0.15em; background: rgb(var(--c-primary)); animation: caret 1s steps(1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
+
+.skeleton { position: relative; overflow: hidden; @apply rounded-md bg-sunken; }
+.skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgb(var(--c-surface) / .6), transparent); animation: shimmer 1.3s infinite; }

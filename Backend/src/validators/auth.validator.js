@@ -1,6 +1,16 @@
 import { body } from "express-validator";
 
-const email = () => body("email").trim().notEmpty().withMessage("Email is required").bail().isEmail().withMessage("Invalid email address").bail().normalizeEmail({ gmail_remove_dots: false });
+// Lower-case only. (validator's normalizeEmail() silently strips "+tags" from Gmail addresses, so a user would be
+// registered under an address they never typed, and a+1@ / a+2@ would collide.)
+const email = () =>
+    body("email")
+        .trim()
+        .notEmpty().withMessage("Email is required")
+        .bail()
+        .isEmail().withMessage("Invalid email address")
+        .bail()
+        .isLength({ max: 254 }).withMessage("Email is too long")
+        .customSanitizer((v) => v.toLowerCase());
 
 const strongPassword = (field, label = "Password") =>
     body(field)
@@ -10,7 +20,7 @@ const strongPassword = (field, label = "Password") =>
         .matches(/[A-Z]/).withMessage(`${label} must contain one uppercase letter`)
         .matches(/[a-z]/).withMessage(`${label} must contain one lowercase letter`)
         .matches(/[0-9]/).withMessage(`${label} must contain one number`)
-        .matches(/[@$!%*?&]/).withMessage(`${label} must contain one special character (@$!%*?&)`);
+        .matches(/[^A-Za-z0-9]/).withMessage(`${label} must contain one special character`);
 
 const username = () =>
     body("username")
@@ -25,6 +35,7 @@ const otp = () =>
 
 export const signupValidator = [username(), email(), strongPassword("password")];
 export const verifyOtpValidator = [email(), otp()];
+export const resendOtpValidator = [email()];
 // Login only checks that a password was sent. Complexity rules belong to signup, not login.
 export const LoginValidator = [email(), body("password").isString().notEmpty().withMessage("Password is required")];
 export const forgotPasswordValidator = [email()];
