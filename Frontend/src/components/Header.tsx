@@ -48,7 +48,7 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-1.5">
-          <a href={`${API_ORIGIN}/api/docs`} target="_blank" rel="noreferrer" className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-sunken hover:text-ink md:inline-flex">
+          <a href={`https://ai-interview-application-26f9.onrender.com/api/docs`} target="_blank" rel="noreferrer" className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-sunken hover:text-ink md:inline-flex">
             <BookOpen className="size-4" aria-hidden /> API docs
           </a>
           <button onClick={toggle} aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} className="grid size-9 place-items-center rounded-lg text-muted hover:bg-sunken hover:text-ink">
