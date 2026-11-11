@@ -19,7 +19,8 @@ export const askAI = async (prompt) => {
         if (!content) throw new Error("The AI returned an empty response");
         return content;
     } catch (error) {
-        throw new ApiError(502, `AI service failed: ${error.message || "unknown error"}`);
+        const target = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1 (default)";
+        throw new ApiError(502, `AI service failed: ${error.message || "unknown error"} [url=${target}, model=${MODEL()}]`);
     }
 };
 
